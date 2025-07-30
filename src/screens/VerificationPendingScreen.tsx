@@ -84,7 +84,7 @@ export const VerificationPendingScreen: React.FC<VerificationPendingScreenProps>
           <View style={styles.estimateContainer}>
             <MaterialIcons name="access-time" size={16} color={Colors.light.secondary} />
             <Text style={[TeaKEStyles.caption, styles.estimateText]}>
-              Estimated review time: 1-2 business days
+              Estimated review time: 20 minutes
             </Text>
           </View>
         </TeaKECard>
@@ -106,7 +106,7 @@ export const VerificationPendingScreen: React.FC<VerificationPendingScreenProps>
             <View style={styles.infoItem}>
               <MaterialIcons name="notifications" size={16} color={Colors.light.success} />
               <Text style={[TeaKEStyles.body, styles.infoText]}>
-                You'll receive a notification when approved
+                You&apos;ll receive a notification when approved
               </Text>
             </View>
             

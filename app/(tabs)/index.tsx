@@ -82,8 +82,8 @@ const AuthenticatedHome: React.FC<{ user: any }> = ({ user }) => {
             <TeaKEButton 
               title="Start Search" 
               onPress={() => {
-                // TODO: Navigate to search screen
-                console.log('Navigate to search');
+                // Navigation is handled by tab system - user can tap Search tab
+                console.log('User can use Search tab for searching');
               }}
               size="small"
             />

@@ -12,20 +12,28 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
-  Alert 
+  Alert,
+  ActivityIndicator 
 } from 'react-native';
 import { useAuth } from '@/src/contexts/AuthContext';
 import { SignInScreen } from '@/src/screens/SignInScreen';
 import { VerificationScreen } from '@/src/screens/VerificationScreen';
 import { TeaKEStyles } from '@/src/constants/Styles';
-import { TeaKEButton, TeaKECard } from '@/src/components/ui';
+import { TeaKEButton, TeaKECard, StatusTag } from '@/src/components/ui';
 import { Colors } from '@/constants/Colors';
+import { searchGuys, GuyProfile } from '@/src/actions/fetchGuyProfile';
+import { MaterialIcons } from '@expo/vector-icons';
 
 export default function SearchScreen() {
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
-  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [nameField, setNameField] = useState('');
+  const [phoneField, setPhoneField] = useState('');
+  const [socialsField, setSocialsField] = useState('');
+  const [searchResults, setSearchResults] = useState<GuyProfile[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [searchType, setSearchType] = useState<'simple' | 'advanced'>('simple');
+  const [selectedGuy, setSelectedGuy] = useState<GuyProfile | null>(null);
 
   // Show auth screens if needed
   if (!user) {
@@ -37,24 +45,90 @@ export default function SearchScreen() {
   }
 
   const handleSearch = async () => {
-    if (!searchTerm.trim()) {
-      Alert.alert('Enter Search Term', 'Please enter a name, nickname, phone, or social handle');
-      return;
+    let searchParams: { name?: string; phone?: string; socials?: string } = {};
+
+    if (searchType === 'simple') {
+      if (!searchTerm.trim()) {
+        Alert.alert('Enter Search Term', 'Please enter a name, nickname, phone, or social handle');
+        return;
+      }
+      // For simple search, try the term in all fields
+      const term = searchTerm.trim();
+      if (term.includes('@') || term.includes('instagram') || term.includes('twitter') || term.includes('tiktok')) {
+        searchParams.socials = term;
+      } else if (/^[0-9+\-\s()]+$/.test(term)) {
+        searchParams.phone = term;
+      } else {
+        searchParams.name = term;
+      }
+    } else {
+      // Advanced search - use specific fields
+      if (!nameField.trim() && !phoneField.trim() && !socialsField.trim()) {
+        Alert.alert('Enter Search Criteria', 'Please fill in at least one search field');
+        return;
+      }
+      if (nameField.trim()) searchParams.name = nameField.trim();
+      if (phoneField.trim()) searchParams.phone = phoneField.trim();
+      if (socialsField.trim()) searchParams.socials = socialsField.trim();
     }
 
     setIsSearching(true);
+    setSearchResults([]);
     
-    // TODO: Implement actual search functionality
-    setTimeout(() => {
-      setSearchResults([]);
+    try {
+      const results = await searchGuys(searchParams);
+      setSearchResults(results);
+      
+      if (results.length === 0) {
+        const searchedTerm = searchType === 'simple' ? searchTerm : 
+          [nameField, phoneField, socialsField].filter(f => f.trim()).join(', ');
+        Alert.alert('No Results', `No one has posted about "${searchedTerm}" yet.`);
+      }
+    } catch (error) {
+      Alert.alert('Search Error', 'Something went wrong. Please try again.');
+      console.error('Search error:', error);
+    } finally {
       setIsSearching(false);
-      Alert.alert('Search Complete', 'No results found. This feature is coming soon!');
-    }, 1000);
+    }
   };
 
   const clearSearch = () => {
     setSearchTerm('');
+    setNameField('');
+    setPhoneField('');
+    setSocialsField('');
     setSearchResults([]);
+    setSelectedGuy(null);
+  };
+
+  const toggleSearchType = () => {
+    setSearchType(prev => prev === 'simple' ? 'advanced' : 'simple');
+    clearSearch();
+  };
+
+  const handleGuySelect = (guy: GuyProfile) => {
+    setSelectedGuy(guy);
+    // For now, just show an alert with guy info
+    // Later this could navigate to a detailed profile screen
+    Alert.alert(
+      guy.name || 'Unknown Name',
+      `${guy.stories?.length || 0} stories shared about this person.\n\n` +
+      `Phone: ${guy.phone || 'Not provided'}\n` +
+      `Socials: ${guy.socials || 'Not provided'}`,
+      [
+        { text: 'View Details', onPress: () => console.log('Navigate to profile:', guy.id) },
+        { text: 'Cancel', style: 'cancel' }
+      ]
+    );
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric' 
+    });
   };
 
   return (
@@ -102,18 +176,7 @@ export default function SearchScreen() {
           </View>
         </TeaKECard>
 
-        {/* Search Tips */}
-        <TeaKECard style={styles.tipsCard}>
-          <Text style={[TeaKEStyles.heading2, { fontSize: 16, marginBottom: 12 }]}>
-            💡 Search Tips
-          </Text>
-          <Text style={[TeaKEStyles.body, { fontSize: 14, lineHeight: 22 }]}>
-            • Try different spellings or nicknames{'\n'}
-            • Use partial phone numbers (last 4 digits){'\n'}
-            • Include social media handles (@username){'\n'}
-            • Don't include sensitive personal info
-          </Text>
-        </TeaKECard>
+
 
         {/* Results Section */}
         {searchResults.length > 0 && (
@@ -165,6 +228,31 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     marginBottom: 24,
   },
+  toggleContainer: {
+    flexDirection: 'row',
+    marginBottom: 16,
+    backgroundColor: Colors.light.accent,
+    borderRadius: 8,
+    padding: 4,
+  },
+  toggleButton: {
+    flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 6,
+    alignItems: 'center',
+  },
+  activeToggle: {
+    backgroundColor: Colors.light.primary,
+  },
+  toggleText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.light.primary,
+  },
+  activeToggleText: {
+    color: '#FFFFFF',
+  },
   searchCard: {
     marginBottom: 16,
   },
@@ -172,9 +260,29 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     minHeight: 48,
   },
+  advancedField: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    paddingHorizontal: 4,
+  },
+  advancedInput: {
+    flex: 1,
+    marginLeft: 12,
+    marginBottom: 0,
+    minHeight: 44,
+  },
   searchButtons: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginTop: 8,
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flex: 1,
+    paddingVertical: 12,
   },
   clearButton: {
     paddingHorizontal: 16,
@@ -193,6 +301,32 @@ const styles = StyleSheet.create({
   },
   resultsContainer: {
     marginBottom: 24,
+  },
+  resultCard: {
+    marginBottom: 12,
+    paddingVertical: 16,
+  },
+  resultHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+  },
+  resultInfo: {
+    flex: 1,
+  },
+  resultDetail: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  storyCount: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: Colors.light.accent,
   },
   noResultsCard: {
     alignItems: 'center',
