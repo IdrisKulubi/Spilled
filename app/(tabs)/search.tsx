@@ -32,7 +32,7 @@ export default function SearchScreen() {
     return <SignInScreen />;
   }
 
-  if (!user.is_verified) {
+  if (!user.verified) {
     return <VerificationScreen />;
   }
 

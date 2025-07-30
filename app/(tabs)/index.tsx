@@ -1,75 +1,205 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+/**
+ * Main Home Screen - Authentication-aware entry point
+ * Shows different content based on user's auth and verification status
+ */
 
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+import React from 'react';
+import { 
+  View, 
+  Text, 
+  SafeAreaView, 
+  ScrollView,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator 
+} from 'react-native';
+import { useAuth } from '@/src/contexts/AuthContext';
+import { SignInScreen } from '@/src/screens/SignInScreen';
+import { VerificationScreen } from '@/src/screens/VerificationScreen';
+import { TeaKEStyles } from '@/src/constants/Styles';
+import { TeaKEButton, TeaKECard } from '@/src/components/ui';
+import { Colors } from '@/constants/Colors';
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
-  );
+  const { user, loading } = useAuth();
+
+  // Show loading spinner while checking auth state
+  if (loading) {
+    return (
+      <SafeAreaView style={[TeaKEStyles.safeContainer, styles.loadingContainer]}>
+        <ActivityIndicator size="large" color={Colors.light.primary} />
+        <Text style={[TeaKEStyles.body, { marginTop: 16, textAlign: 'center' }]}>
+          Loading TeaKE...
+        </Text>
+      </SafeAreaView>
+    );
+  }
+
+  // Show sign in screen if not authenticated
+  if (!user) {
+    return <SignInScreen />;
+  }
+
+  // Show verification screen if not verified
+  if (!user.verified) {
+    return <VerificationScreen />;
+  }
+
+  // Main authenticated home screen
+  return <AuthenticatedHome user={user} />;
 }
 
+// Main dashboard for verified users
+const AuthenticatedHome: React.FC<{ user: any }> = ({ user }) => {
+  const { signOut } = useAuth();
+
+  const handleSignOut = async () => {
+    await signOut();
+  };
+
+  return (
+    <SafeAreaView style={TeaKEStyles.safeContainer}>
+      <ScrollView style={TeaKEStyles.container} showsVerticalScrollIndicator={false}>
+        {/* Header */}
+        <View style={styles.headerContainer}>
+          <View>
+            <Text style={styles.welcomeText}>Welcome back!</Text>
+            <Text style={[TeaKEStyles.body, { opacity: 0.8 }]}>
+              {user.nickname || user.email}
+            </Text>
+          </View>
+          <TouchableOpacity 
+            onPress={handleSignOut}
+            style={styles.signOutButton}
+          >
+            <Text style={styles.signOutText}>Sign Out</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Quick Actions */}
+        <View style={styles.quickActionsContainer}>
+          <Text style={[TeaKEStyles.heading2, { marginBottom: 16 }]}>
+            What would you like to do?
+          </Text>
+          
+          <TeaKECard style={styles.actionCard}>
+            <Text style={styles.actionEmoji}>🔍</Text>
+            <Text style={[TeaKEStyles.heading2, { fontSize: 18 }]}>
+              Search for a Guy
+            </Text>
+            <Text style={[TeaKEStyles.body, { opacity: 0.8, marginBottom: 16 }]}>
+              Look up someone you're dating or curious about
+            </Text>
+            <TeaKEButton 
+              title="Start Search" 
+              onPress={() => {
+                // TODO: Navigate to search screen
+                console.log('Navigate to search');
+              }}
+              size="small"
+            />
+          </TeaKECard>
+
+          <TeaKECard style={styles.actionCard}>
+            <Text style={styles.actionEmoji}>📝</Text>
+            <Text style={[TeaKEStyles.heading2, { fontSize: 18 }]}>
+              Share a Story
+            </Text>
+            <Text style={[TeaKEStyles.body, { opacity: 0.8, marginBottom: 16 }]}>
+              Help other women by sharing your experience
+            </Text>
+            <TeaKEButton 
+              title="Add Post" 
+              onPress={() => {
+                // TODO: Navigate to add post screen
+                console.log('Navigate to add post');
+              }}
+              size="small"
+              variant="secondary"
+            />
+          </TeaKECard>
+        </View>
+
+        {/* Recent Activity */}
+        <View style={styles.recentSection}>
+          <Text style={[TeaKEStyles.heading2, { marginBottom: 16 }]}>
+            Recent Activity
+          </Text>
+          
+          <TeaKECard>
+            <Text style={[TeaKEStyles.body, { textAlign: 'center', opacity: 0.6 }]}>
+              No recent activity yet.{'\n'}
+              Start by searching for someone or sharing a story.
+            </Text>
+          </TeaKECard>
+        </View>
+
+        {/* Safety Reminder */}
+        <TeaKECard style={StyleSheet.flatten([styles.safetyCard, { marginBottom: 32 }])}>
+          <Text style={styles.safetyEmoji}>🛡️</Text>
+          <Text style={[TeaKEStyles.body, { fontSize: 14, textAlign: 'center' }]}>
+            <Text style={{ fontWeight: '600' }}>Stay Safe:</Text> Remember to verify information independently. 
+            Use TeaKE as a starting point, not the final word.
+          </Text>
+        </TeaKECard>
+      </ScrollView>
+    </SafeAreaView>
+  );
+};
+
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
+  loadingContainer: {
+    justifyContent: 'center',
     alignItems: 'center',
-    gap: 8,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  headerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    paddingTop: 16,
+    marginBottom: 32,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  welcomeText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: Colors.light.text,
+    marginBottom: 4,
+  },
+  signOutButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: Colors.light.accent,
+  },
+  signOutText: {
+    fontSize: 14,
+    color: Colors.light.primary,
+    fontWeight: '600',
+  },
+  quickActionsContainer: {
+    marginBottom: 32,
+  },
+  actionCard: {
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingVertical: 24,
+  },
+  actionEmoji: {
+    fontSize: 32,
+    marginBottom: 12,
+  },
+  recentSection: {
+    marginBottom: 32,
+  },
+  safetyCard: {
+    alignItems: 'center',
+    backgroundColor: Colors.light.accent,
+    borderColor: Colors.light.primary,
+    borderWidth: 1,
+    paddingVertical: 20,
+  },
+  safetyEmoji: {
+    fontSize: 24,
+    marginBottom: 12,
   },
 });
