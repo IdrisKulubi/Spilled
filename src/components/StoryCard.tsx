@@ -24,14 +24,16 @@ import { StoryFeedItem, ReactionType } from '../actions/fetchStoriesFeed';
 interface StoryCardProps {
   story: StoryFeedItem;
   onReaction: (storyId: string, reactionType: ReactionType) => Promise<void>;
-  onComment: (story: StoryFeedItem) => void;
+  onViewComments: (story: StoryFeedItem) => void;
+  onAddComment: (story: StoryFeedItem) => void;
   isReacting?: boolean;
 }
 
 export const StoryCard: React.FC<StoryCardProps> = ({
   story,
   onReaction,
-  onComment,
+  onViewComments,
+  onAddComment,
   isReacting = false
 }) => {
   const [expandedText, setExpandedText] = useState(false);
@@ -70,6 +72,12 @@ export const StoryCard: React.FC<StoryCardProps> = ({
       } else {
         parts.push(nameParts[0]);
       }
+    }
+    if (story.guy_age) {
+      parts.push(`${story.guy_age}yo`);
+    }
+    if (story.guy_location) {
+      parts.push(story.guy_location);
     }
     if (story.guy_phone) {
       // Show last 4 digits only
@@ -192,7 +200,7 @@ export const StoryCard: React.FC<StoryCardProps> = ({
           {/* Comment button */}
           <TouchableOpacity 
             style={styles.actionButton}
-            onPress={() => onComment(story)}
+            onPress={() => onAddComment(story)}
           >
             <MaterialIcons name="chat-bubble-outline" size={24} color={Colors.light.text} />
           </TouchableOpacity>
@@ -230,14 +238,23 @@ export const StoryCard: React.FC<StoryCardProps> = ({
         </View>
       )}
 
-      {/* Comments preview */}
-      {story.comment_count > 0 && (
+      {/* Comments preview or Add Comment */}
+      {story.comment_count > 0 ? (
         <TouchableOpacity 
           style={styles.commentsPreview}
-          onPress={() => onComment(story)}
+          onPress={() => onViewComments(story)}
         >
           <Text style={styles.commentsPreviewText}>
             View all {story.comment_count} comments
+          </Text>
+        </TouchableOpacity>
+      ) : (
+        <TouchableOpacity 
+          style={styles.addCommentButton}
+          onPress={() => onAddComment(story)}
+        >
+          <Text style={styles.addCommentButtonText}>
+            Add a comment
           </Text>
         </TouchableOpacity>
       )}
@@ -258,8 +275,10 @@ export const StoryCard: React.FC<StoryCardProps> = ({
 const styles = StyleSheet.create({
   card: {
     backgroundColor: Colors.light.cardBackground,
+    marginHorizontal: Spacing.md,
     marginBottom: Spacing.md,
-    borderRadius: 0, // Instagram-like sharp edges
+    borderRadius: 16, // rounded corners following design rules
+    overflow: 'hidden',
     shadowColor: Colors.light.shadow,
     shadowOffset: {
       width: 0,
@@ -384,6 +403,20 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: Colors.light.textSecondary,
     fontWeight: '500',
+  },
+  addCommentButton: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    backgroundColor: Colors.light.accent,
+    borderRadius: 8,
+    marginHorizontal: Spacing.md,
+    marginBottom: Spacing.sm,
+    alignItems: 'center',
+  },
+  addCommentButtonText: {
+    fontSize: 13,
+    color: Colors.light.primary,
+    fontWeight: '600',
   },
   safetyNotice: {
     flexDirection: 'row',

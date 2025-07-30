@@ -3,55 +3,42 @@
  * Instagram-like bottom sheet for viewing and adding comments
  */
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   Modal,
   FlatList,
-  KeyboardAvoidingView,
-  Platform,
   Animated,
   PanResponder,
   Dimensions,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useAuth } from '../contexts/AuthContext';
+
 import { Colors } from '../../constants/Colors';
 import { Spacing } from '../constants/Styles';
 import { StoryFeedItem, StoryComment } from '../actions/fetchStoriesFeed';
-import { addComment } from '../actions/fetchGuyProfile';
+
 
 const { height: screenHeight } = Dimensions.get('window');
-const BOTTOM_SHEET_MIN_HEIGHT = 100;
-const BOTTOM_SHEET_MAX_HEIGHT = screenHeight * 0.9;
-const BOTTOM_SHEET_DEFAULT_HEIGHT = screenHeight * 0.75; // Open to 75% by default
+const BOTTOM_SHEET_DEFAULT_HEIGHT = screenHeight * 0.8; // Open to 80% to ensure input is visible
 
 interface CommentsBottomSheetProps {
   visible: boolean;
   story: StoryFeedItem | null;
   onClose: () => void;
-  onCommentAdded: () => void;
 }
 
 export const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
   visible,
   story,
-  onClose,
-  onCommentAdded
+  onClose
 }) => {
-  const { user } = useAuth();
-  const [commentText, setCommentText] = useState('');
-  const [anonymous, setAnonymous] = useState(true);
-  const [nickname, setNickname] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [comments, setComments] = useState<StoryComment[]>([]);
   
-  const translateY = useRef(new Animated.Value(BOTTOM_SHEET_MAX_HEIGHT)).current;
+  const translateY = useRef(new Animated.Value(BOTTOM_SHEET_DEFAULT_HEIGHT)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
 
   // Update comments when story changes
@@ -69,33 +56,19 @@ export const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
       },
       onPanResponderMove: (evt, gestureState) => {
         const openHeight = screenHeight - BOTTOM_SHEET_DEFAULT_HEIGHT;
-        const maxOpenHeight = screenHeight - BOTTOM_SHEET_MAX_HEIGHT;
         const newY = openHeight + gestureState.dy;
         
-        // Allow dragging both up and down
+        // Only allow dragging down to close
         if (gestureState.dy > 0) {
-          // Dragging down - limit to open height
           translateY.setValue(Math.max(openHeight, newY));
-        } else {
-          // Dragging up - allow to max height
-          translateY.setValue(Math.max(maxOpenHeight, newY));
         }
       },
       onPanResponderRelease: (evt, gestureState) => {
         const openHeight = screenHeight - BOTTOM_SHEET_DEFAULT_HEIGHT;
-        const maxOpenHeight = screenHeight - BOTTOM_SHEET_MAX_HEIGHT;
         
         if (gestureState.dy > 100 || gestureState.vy > 0.5) {
           // Close if dragged down significantly
           closeBottomSheet();
-        } else if (gestureState.dy < -100 || gestureState.vy < -0.5) {
-          // Expand to full height if dragged up significantly
-          Animated.spring(translateY, {
-            toValue: maxOpenHeight,
-            tension: 100,
-            friction: 8,
-            useNativeDriver: true,
-          }).start();
         } else {
           // Return to default height
           Animated.spring(translateY, {
@@ -109,7 +82,7 @@ export const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
     })
   ).current;
 
-  const openBottomSheet = () => {
+  const openBottomSheet = useCallback(() => {
     const openHeight = screenHeight - BOTTOM_SHEET_DEFAULT_HEIGHT;
     Animated.parallel([
       Animated.spring(translateY, {
@@ -124,12 +97,12 @@ export const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
         useNativeDriver: true,
       }),
     ]).start();
-  };
+  }, [backdropOpacity, translateY]);
 
   const closeBottomSheet = () => {
     Animated.parallel([
       Animated.spring(translateY, {
-        toValue: BOTTOM_SHEET_MAX_HEIGHT,
+        toValue: BOTTOM_SHEET_DEFAULT_HEIGHT,
         useNativeDriver: true,
       }),
       Animated.timing(backdropOpacity, {
@@ -139,9 +112,6 @@ export const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
       }),
     ]).start(() => {
       onClose();
-      setCommentText('');
-      setNickname('');
-      setAnonymous(true);
     });
   };
 
@@ -149,60 +119,12 @@ export const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
     if (visible) {
       openBottomSheet();
     } else {
-      translateY.setValue(BOTTOM_SHEET_MAX_HEIGHT);
+      translateY.setValue(BOTTOM_SHEET_DEFAULT_HEIGHT);
       backdropOpacity.setValue(0);
     }
-  }, [visible]);
+  }, [visible, openBottomSheet, translateY, backdropOpacity]);
 
-  const handleSubmit = async () => {
-    if (!commentText.trim()) {
-      Alert.alert('Comment Required', 'Please enter a comment.');
-      return;
-    }
 
-    if (!user || !story) return;
-
-    if (!anonymous && !nickname.trim()) {
-      Alert.alert('Nickname Required', 'Please provide a nickname or comment anonymously.');
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    try {
-      const response = await addComment(
-        story.id,
-        commentText.trim(),
-        anonymous,
-        anonymous ? undefined : nickname.trim()
-      );
-
-      if (response.success && response.commentId) {
-        const newComment: StoryComment = {
-          id: response.commentId,
-          user_id: user.id,
-          text: commentText.trim(),
-          created_at: new Date().toISOString(),
-          anonymous,
-          nickname: anonymous ? undefined : nickname.trim()
-        };
-
-        setComments(prev => [newComment, ...prev]);
-        setCommentText('');
-        setNickname('');
-        onCommentAdded();
-        
-        Alert.alert('Support Sent! 💝', 'Thank you for supporting this sister.');
-      } else {
-        Alert.alert('Error', response.error || 'Failed to add comment.');
-      }
-    } catch (error) {
-      console.error('Error adding comment:', error);
-      Alert.alert('Error', 'Something went wrong. Please try again.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   const formatTimeAgo = (dateString: string): string => {
     const now = new Date();
@@ -267,11 +189,6 @@ export const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
             },
           ]}
           {...panResponder.panHandlers}
-        >
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            style={styles.keyboardAvoidingView}
-            keyboardVerticalOffset={0}
           >
             {/* Handle */}
             <View style={styles.handle} />
@@ -284,78 +201,26 @@ export const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
               </TouchableOpacity>
             </View>
 
-            {/* Comments List - Takes remaining space */}
-            <FlatList
-              data={comments}
-              renderItem={renderComment}
-              keyExtractor={(item) => item.id}
-              style={styles.commentsList}
-              showsVerticalScrollIndicator={false}
-              ListEmptyComponent={
-                <View style={styles.emptyComments}>
-                  <MaterialIcons name="chat-bubble-outline" size={32} color={Colors.light.textSecondary} />
-                  <Text style={styles.emptyCommentsText}>
-                    No comments yet. Be the first to offer support!
-                  </Text>
-                </View>
-              }
-              contentContainerStyle={styles.commentsListContent}
-            />
-
-            {/* Comment Input - Always at bottom */}
-            <View style={[styles.inputContainer, { backgroundColor: '#f8f9fa' }]}>
-              <View style={styles.inputRow}>
-                <View style={styles.userAvatar}>
-                  <MaterialIcons name="person" size={16} color={Colors.light.primary} />
-                </View>
-                <TextInput
-                  style={styles.textInput}
-                  placeholder="Add a comment..."
-                  value={commentText}
-                  onChangeText={setCommentText}
-                  multiline
-                  maxLength={500}
-                />
-                <TouchableOpacity
-                  style={[
-                    styles.sendButton,
-                    { opacity: commentText.trim() ? 1 : 0.5 }
-                  ]}
-                  onPress={handleSubmit}
-                  disabled={!commentText.trim() || isSubmitting}
-                >
-                  <Text style={styles.sendButtonText}>
-                    {isSubmitting ? '...' : 'Send'}
-                  </Text>
-                </TouchableOpacity>
+          {/* Comments List */}
+          <FlatList
+            data={comments}
+            renderItem={renderComment}
+            keyExtractor={(item) => item.id}
+            style={styles.commentsList}
+            showsVerticalScrollIndicator={false}
+            ListEmptyComponent={
+              <View style={styles.emptyComments}>
+                <MaterialIcons name="chat-bubble-outline" size={32} color={Colors.light.textSecondary} />
+                <Text style={styles.emptyCommentsText}>
+                  No comments yet. Be the first to offer support!
+                </Text>
               </View>
+            }
+            contentContainerStyle={styles.commentsListContent}
+          />
 
-              {/* Privacy Toggle */}
-              <View style={styles.privacyRow}>
-                <TouchableOpacity
-                  style={styles.anonymousToggle}
-                  onPress={() => setAnonymous(!anonymous)}
-                >
-                  <MaterialIcons
-                    name={anonymous ? 'check-box' : 'check-box-outline-blank'}
-                    size={16}
-                    color={Colors.light.primary}
-                  />
-                  <Text style={styles.anonymousText}>Anonymous</Text>
-                </TouchableOpacity>
 
-                {!anonymous && (
-                  <TextInput
-                    style={styles.nicknameInput}
-                    placeholder="Your name"
-                    value={nickname}
-                    onChangeText={setNickname}
-                    maxLength={30}
-                  />
-                )}
-              </View>
-            </View>
-          </KeyboardAvoidingView>
+
         </Animated.View>
       </View>
     </Modal>
@@ -378,7 +243,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.cardBackground,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    height: BOTTOM_SHEET_MAX_HEIGHT,
+    height: BOTTOM_SHEET_DEFAULT_HEIGHT, // Use default height to ensure input is visible
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -422,7 +287,7 @@ const styles = StyleSheet.create({
     padding: Spacing.xs,
   },
   commentsList: {
-    flex: 1,
+    flexGrow: 1,
     paddingHorizontal: Spacing.md,
   },
   commentItem: {
@@ -466,72 +331,5 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: Spacing.sm,
   },
-  inputContainer: {
-    borderTopWidth: 1,
-    borderTopColor: Colors.light.border,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    backgroundColor: Colors.light.cardBackground,
-    minHeight: 80, // Ensure minimum height
-    justifyContent: 'center',
-  },
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    marginBottom: Spacing.xs,
-  },
-  userAvatar: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: Colors.light.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: Spacing.sm,
-  },
-  textInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: Colors.light.border,
-    borderRadius: 20,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
-    fontSize: 14,
-    maxHeight: 80,
-    marginRight: Spacing.sm,
-  },
-  sendButton: {
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
-  },
-  sendButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.light.primary,
-  },
-  privacyRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingLeft: 40, // Align with text input
-  },
-  anonymousToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginRight: Spacing.md,
-  },
-  anonymousText: {
-    fontSize: 12,
-    color: Colors.light.textSecondary,
-    marginLeft: 4,
-  },
-  nicknameInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: Colors.light.border,
-    borderRadius: 12,
-    paddingHorizontal: Spacing.xs,
-    paddingVertical: 4,
-    fontSize: 12,
-    height: 28,
-  },
+
 });

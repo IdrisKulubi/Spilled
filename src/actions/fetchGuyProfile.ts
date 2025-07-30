@@ -14,6 +14,8 @@ export interface GuyProfile {
   name?: string;
   phone?: string;
   socials?: string;
+  location?: string;
+  age?: number;
   created_at: string;
   stories: Story[];
 }

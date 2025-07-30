@@ -13,6 +13,8 @@ export interface CreatePostData {
   guyName?: string;
   guyPhone?: string;
   guySocials?: string;
+  guyLocation?: string;
+  guyAge?: number;
   storyText: string;
   tags: TagType[];
   imageUrl?: string;
@@ -102,6 +104,8 @@ export const addPost = async (postData: CreatePostData): Promise<PostResponse> =
           name: postData.guyName,
           phone: formattedPhone,
           socials: postData.guySocials,
+          location: postData.guyLocation,
+          age: postData.guyAge,
           created_by_user_id: currentUser.id,
         })
         .select('id')

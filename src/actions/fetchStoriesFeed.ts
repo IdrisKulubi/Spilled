@@ -14,6 +14,8 @@ export interface StoryFeedItem {
   guy_name?: string;
   guy_phone?: string;  
   guy_socials?: string;
+  guy_location?: string;
+  guy_age?: number;
   user_id: string;
   text: string;
   tags: TagType[];
@@ -79,7 +81,9 @@ export const fetchStoriesFeed = async (
           id,
           name,
           phone,
-          socials
+          socials,
+          location,
+          age
         ),
         comments (
           id,
@@ -159,6 +163,8 @@ export const fetchStoriesFeed = async (
         guy_name: story.guys?.name,
         guy_phone: story.guys?.phone,
         guy_socials: story.guys?.socials,
+        guy_location: story.guys?.location,
+        guy_age: story.guys?.age,
         user_id: story.user_id,
         text: story.text,
         tags: story.tags,

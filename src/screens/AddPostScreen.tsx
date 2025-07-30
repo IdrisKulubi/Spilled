@@ -28,6 +28,8 @@ export const AddPostScreen: React.FC = () => {
   const [guyName, setGuyName] = useState('');
   const [guyPhone, setGuyPhone] = useState('');
   const [guySocials, setGuySocials] = useState('');
+  const [guyLocation, setGuyLocation] = useState('');
+  const [guyAge, setGuyAge] = useState('');
   const [storyText, setStoryText] = useState('');
   const [selectedTags, setSelectedTags] = useState<TagType[]>([]);
   const [imageUri, setImageUri] = useState<string | null>(null);
@@ -129,6 +131,12 @@ export const AddPostScreen: React.FC = () => {
       return false;
     }
 
+    // Validate age if provided
+    if (guyAge.trim() && (isNaN(Number(guyAge)) || Number(guyAge) < 18 || Number(guyAge) > 100)) {
+      Alert.alert('Invalid Age', 'Please enter a valid age between 18 and 100.');
+      return false;
+    }
+
     if (!anonymous && !nickname.trim()) {
       Alert.alert('Nickname Required', 'Please provide a nickname or switch to anonymous posting.');
       return false;
@@ -151,6 +159,8 @@ export const AddPostScreen: React.FC = () => {
         guyName: guyName.trim() || undefined,
         guyPhone: guyPhone.trim() || undefined,
         guySocials: guySocials.trim() || undefined,
+        guyLocation: guyLocation.trim() || undefined,
+        guyAge: guyAge.trim() ? Number(guyAge.trim()) : undefined,
         storyText: storyText.trim(),
         tags: selectedTags,
         imageUrl: imageUri || undefined,
@@ -172,6 +182,8 @@ export const AddPostScreen: React.FC = () => {
                 setGuyName('');
                 setGuyPhone('');
                 setGuySocials('');
+                setGuyLocation('');
+                setGuyAge('');
                 setStoryText('');
                 setSelectedTags([]);
                 setImageUri(null);
@@ -246,6 +258,29 @@ export const AddPostScreen: React.FC = () => {
               value={guySocials}
               onChangeText={setGuySocials}
               autoCapitalize="none"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Location</Text>
+            <TextInput
+              style={TeaKEStyles.textInput}
+              placeholder="e.g., Nairobi, Karen, USIU, etc."
+              value={guyLocation}
+              onChangeText={setGuyLocation}
+              autoCapitalize="words"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Age</Text>
+            <TextInput
+              style={TeaKEStyles.textInput}
+              placeholder="e.g., 25"
+              value={guyAge}
+              onChangeText={setGuyAge}
+              keyboardType="numeric"
+              maxLength={3}
             />
           </View>
         </TeaKECard>

@@ -16,6 +16,7 @@ import { Colors } from '@/constants/Colors';
 import { MaterialIcons } from '@expo/vector-icons';
 import { StoryCard } from '@/src/components/StoryCard';
 import { CommentsBottomSheet } from '@/src/components/CommentsBottomSheet';
+import { AddCommentModal } from '@/src/components/AddCommentModal';
 import { 
   fetchStoriesFeed, 
   reactToStory, 
@@ -31,6 +32,7 @@ export default function ExploreScreen() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [reacting, setReacting] = useState<string | null>(null);
   const [commentBottomSheetStory, setCommentBottomSheetStory] = useState<StoryFeedItem | null>(null);
+  const [addCommentModalStory, setAddCommentModalStory] = useState<StoryFeedItem | null>(null);
 
   // Load initial stories
   const loadStories = useCallback(async (refresh = false) => {
@@ -100,13 +102,18 @@ export default function ExploreScreen() {
     }
   }, [user, loadStories]);
 
-  // Handle comment bottom sheet
-  const handleComment = useCallback((story: StoryFeedItem) => {
+  // Handle view comments
+  const handleViewComments = useCallback((story: StoryFeedItem) => {
+    setCommentBottomSheetStory(story);
+  }, []);
+
+  // Handle add comment
+  const handleAddComment = useCallback((story: StoryFeedItem) => {
     if (!user) {
       Alert.alert('Login Required', 'Please log in to add comments');
       return;
     }
-    setCommentBottomSheetStory(story);
+    setAddCommentModalStory(story);
   }, [user]);
 
   // Handle comment added
@@ -117,14 +124,15 @@ export default function ExploreScreen() {
   // Initial load
   useEffect(() => {
     loadStories();
-  }, []);
+  }, [loadStories]);
 
   // Render story item
   const renderStoryItem = ({ item }: { item: StoryFeedItem }) => (
     <StoryCard
       story={item}
       onReaction={handleReaction}
-      onComment={handleComment}
+      onViewComments={handleViewComments}
+      onAddComment={handleAddComment}
       isReacting={reacting === item.id}
     />
   );
@@ -203,6 +211,13 @@ export default function ExploreScreen() {
         visible={!!commentBottomSheetStory}
         story={commentBottomSheetStory}
         onClose={() => setCommentBottomSheetStory(null)}
+      />
+
+      {/* Add Comment Modal */}
+      <AddCommentModal
+        visible={!!addCommentModalStory}
+        story={addCommentModalStory}
+        onClose={() => setAddCommentModalStory(null)}
         onCommentAdded={handleCommentAdded}
       />
     </SafeAreaView>

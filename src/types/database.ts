@@ -63,6 +63,8 @@ export interface Database {
           name?: string | null
           phone?: string | null
           socials?: string | null
+          location?: string | null
+          age?: number | null
           created_by_user_id: string
           created_at: string
         }
@@ -71,6 +73,8 @@ export interface Database {
           name?: string | null
           phone?: string | null
           socials?: string | null
+          location?: string | null
+          age?: number | null
           created_by_user_id: string
           created_at?: string
         }
@@ -79,6 +83,8 @@ export interface Database {
           name?: string | null
           phone?: string | null
           socials?: string | null
+          location?: string | null
+          age?: number | null
           created_by_user_id?: string
           created_at?: string
         }
