@@ -1,217 +1,111 @@
-/**
- * Search Tab - Integrated Search Screen for TeaKE
- * Allows users to search for guys and view results
- */
-
-import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  SafeAreaView, 
-  TextInput,
-  TouchableOpacity,
-  ScrollView,
-  StyleSheet,
-  Alert 
-} from 'react-native';
-import { useAuth } from '@/src/contexts/AuthContext';
-import { SignInScreen } from '@/src/screens/SignInScreen';
-import { VerificationScreen } from '@/src/screens/VerificationScreen';
+import React from 'react';
+import { View, Text, SafeAreaView, ScrollView, StyleSheet } from 'react-native';
 import { TeaKEStyles } from '@/src/constants/Styles';
-import { TeaKEButton, TeaKECard } from '@/src/components/ui';
+import { TeaKECard } from '@/src/components/ui';
 import { Colors } from '@/constants/Colors';
+import { MaterialIcons } from '@expo/vector-icons';
 
-export default function SearchScreen() {
-  const { user } = useAuth();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
-
-  // Show auth screens if needed
-  if (!user) {
-    return <SignInScreen />;
-  }
-
-  if (!user.is_verified) {
-    return <VerificationScreen />;
-  }
-
-  const handleSearch = async () => {
-    if (!searchTerm.trim()) {
-      Alert.alert('Enter Search Term', 'Please enter a name, nickname, phone, or social handle');
-      return;
-    }
-
-    setIsSearching(true);
-    
-    // TODO: Implement actual search functionality
-    setTimeout(() => {
-      setSearchResults([]);
-      setIsSearching(false);
-      Alert.alert('Search Complete', 'No results found. This feature is coming soon!');
-    }, 1000);
-  };
-
-  const clearSearch = () => {
-    setSearchTerm('');
-    setSearchResults([]);
-  };
-
+export default function ExploreScreen() {
   return (
-    <SafeAreaView style={TeaKEStyles.safeContainer}>
+    <SafeAreaView style={[TeaKEStyles.safeContainer, styles.container]}>
       <ScrollView style={TeaKEStyles.container} showsVerticalScrollIndicator={false}>
+        
         {/* Header */}
-        <View style={styles.headerContainer}>
-          <Text style={TeaKEStyles.heading1}>Search for a Guy</Text>
-          <Text style={[TeaKEStyles.body, { opacity: 0.8 }]}>
-            Enter any information you have about him
+        <View style={styles.header}>
+          <Text style={[TeaKEStyles.h1, styles.title]}>Explore</Text>
+          <Text style={[TeaKEStyles.body, styles.subtitle]}>
+            Discover trending topics and popular stories
           </Text>
         </View>
 
-        {/* Search Form */}
-        <TeaKECard style={styles.searchCard}>
-          <Text style={[TeaKEStyles.heading2, { fontSize: 16, marginBottom: 16 }]}>
-            Search by any of these:
+        {/* Coming Soon Card */}
+        <TeaKECard style={styles.comingSoonCard}>
+          <View style={styles.iconContainer}>
+            <MaterialIcons name="explore" size={48} color={Colors.light.primary} />
+          </View>
+          <Text style={[TeaKEStyles.h3, styles.comingSoonTitle]}>
+            Coming Soon!
+          </Text>
+          <Text style={[TeaKEStyles.body, styles.comingSoonDescription]}>
+            The Explore section is under development. Soon you'll be able to discover:
           </Text>
           
-          <TextInput
-            style={[TeaKEStyles.textInput, styles.searchInput]}
-            placeholder="Name, nickname, phone, social handle..."
-            value={searchTerm}
-            onChangeText={setSearchTerm}
-            multiline={false}
-            autoCapitalize="none"
-            autoComplete="off"
-          />
-
-          <View style={styles.searchButtons}>
-            <TeaKEButton
-              title={isSearching ? "Searching..." : "Search"}
-              onPress={handleSearch}
-              disabled={isSearching || !searchTerm.trim()}
-              style={{ flex: 1, marginRight: 8 }}
-            />
-            {searchTerm.length > 0 && (
-              <TouchableOpacity 
-                style={styles.clearButton}
-                onPress={clearSearch}
-              >
-                <Text style={styles.clearButtonText}>Clear</Text>
-              </TouchableOpacity>
-            )}
+          <View style={styles.featureList}>
+            <View style={styles.featureItem}>
+              <MaterialIcons name="trending-up" size={16} color={Colors.light.success} />
+              <Text style={styles.featureText}>Trending stories and discussions</Text>
+            </View>
+            <View style={styles.featureItem}>
+              <MaterialIcons name="tag" size={16} color={Colors.light.success} />
+              <Text style={styles.featureText}>Popular tags and topics</Text>
+            </View>
+            <View style={styles.featureItem}>
+              <MaterialIcons name="people" size={16} color={Colors.light.success} />
+              <Text style={styles.featureText}>Most active community members</Text>
+            </View>
+            <View style={styles.featureItem}>
+              <MaterialIcons name="star" size={16} color={Colors.light.success} />
+              <Text style={styles.featureText}>Curated content recommendations</Text>
+            </View>
           </View>
         </TeaKECard>
 
-        {/* Search Tips */}
-        <TeaKECard style={styles.tipsCard}>
-          <Text style={[TeaKEStyles.heading2, { fontSize: 16, marginBottom: 12 }]}>
-            💡 Search Tips
-          </Text>
-          <Text style={[TeaKEStyles.body, { fontSize: 14, lineHeight: 22 }]}>
-            • Try different spellings or nicknames{'\n'}
-            • Use partial phone numbers (last 4 digits){'\n'}
-            • Include social media handles (@username){'\n'}
-            • Don't include sensitive personal info
-          </Text>
-        </TeaKECard>
-
-        {/* Results Section */}
-        {searchResults.length > 0 && (
-          <View style={styles.resultsContainer}>
-            <Text style={[TeaKEStyles.heading2, { marginBottom: 16 }]}>
-              Search Results
-            </Text>
-            {/* TODO: Render search results */}
-          </View>
-        )}
-
-        {/* No Results State */}
-        {searchTerm && !isSearching && searchResults.length === 0 && (
-          <TeaKECard style={styles.noResultsCard}>
-            <Text style={styles.noResultsEmoji}>🔍</Text>
-            <Text style={[TeaKEStyles.heading2, { fontSize: 18, marginBottom: 8 }]}>
-              No Results Found
-            </Text>
-            <Text style={[TeaKEStyles.body, { textAlign: 'center', marginBottom: 16 }]}>
-              No one has posted about "{searchTerm}" yet.
-            </Text>
-            <TeaKEButton
-              title="Be the First to Share"
-              onPress={() => {
-                // TODO: Navigate to add post with pre-filled name
-                Alert.alert('Coming Soon', 'Add post functionality is being developed!');
-              }}
-              variant="secondary"
-              size="small"
-            />
-          </TeaKECard>
-        )}
-
-        {/* Safety Notice */}
-        <TeaKECard style={[styles.safetyCard, { marginBottom: 32 }]}>
-          <Text style={styles.safetyEmoji}>🛡️</Text>
-          <Text style={[TeaKEStyles.body, { fontSize: 14, textAlign: 'center' }]}>
-            <Text style={{ fontWeight: '600' }}>Privacy Notice:</Text> We don't store your searches. 
-            All information is encrypted and only verified users can search.
-          </Text>
-        </TeaKECard>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  headerContainer: {
-    paddingTop: 16,
+  container: {
+    backgroundColor: Colors.light.background,
+  },
+  header: {
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 32,
+  },
+  title: {
+    marginBottom: 8,
+  },
+  subtitle: {
+    color: Colors.light.secondary,
+  },
+  comingSoonCard: {
+    marginHorizontal: 24,
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  iconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: Colors.light.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 24,
   },
-  searchCard: {
+  comingSoonTitle: {
     marginBottom: 16,
+    textAlign: 'center',
   },
-  searchInput: {
-    marginBottom: 16,
-    minHeight: 48,
+  comingSoonDescription: {
+    textAlign: 'center',
+    marginBottom: 32,
+    lineHeight: 22,
   },
-  searchButtons: {
+  featureList: {
+    alignSelf: 'stretch',
+    gap: 16,
+  },
+  featureItem: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    gap: 12,
   },
-  clearButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 8,
-    backgroundColor: Colors.light.accent,
-  },
-  clearButtonText: {
-    color: Colors.light.primary,
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  tipsCard: {
-    backgroundColor: Colors.light.accent,
-    marginBottom: 24,
-  },
-  resultsContainer: {
-    marginBottom: 24,
-  },
-  noResultsCard: {
-    alignItems: 'center',
-    paddingVertical: 32,
-    marginBottom: 24,
-  },
-  noResultsEmoji: {
-    fontSize: 48,
-    marginBottom: 16,
-  },
-  safetyCard: {
-    alignItems: 'center',
-    backgroundColor: Colors.light.accent,
-    borderColor: Colors.light.primary,
-    borderWidth: 1,
-    paddingVertical: 20,
-  },
-  safetyEmoji: {
-    fontSize: 24,
-    marginBottom: 12,
+  featureText: {
+    flex: 1,
+    fontSize: 16,
+    color: Colors.light.text,
+    lineHeight: 22,
   },
 });

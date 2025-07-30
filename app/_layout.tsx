@@ -2,50 +2,72 @@ import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { AuthProvider } from '@/src/contexts/AuthContext';
+import { AuthProvider, useAuth } from '@/src/contexts/AuthContext';
 import { SplashScreen } from '@/components/SplashScreen';
+
+// This component now receives fontLoaded as a prop
+function AppStack({ fontLoaded }: { fontLoaded: boolean }) {
+  const { loading: authLoading } = useAuth();
+
+  // The condition to show the splash screen is now combined here
+  const isLoading = authLoading || !fontLoaded;
+
+  console.log(
+    `[Layout] AppStack. Auth loading: ${authLoading}, Fonts loaded: ${fontLoaded}, isLoading: ${isLoading}`
+  );
+
+  if (isLoading) {
+    return <SplashScreen />;
+  }
+
+  return (
+    <Stack>
+      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen name="+not-found" />
+    </Stack>
+  );
+}
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
-  const [loaded] = useFonts({
+  const [fontTimeout, setFontTimeout] = React.useState(false);
+  
+  // The useFonts hook is now in the top-level layout component
+  const [fontLoaded, fontError] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
-  const [showSplash, setShowSplash] = useState(true);
 
-  useEffect(() => {
-    if (loaded) {
-      // Keep splash screen for minimum time to show animations
-      const timer = setTimeout(() => {
-        setShowSplash(false);
-      }, 3000);
-      
-      return () => clearTimeout(timer);
+  // Add a timeout to prevent infinite loading due to font issues
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      console.log('[Layout] Font loading timeout - proceeding without fonts');
+      setFontTimeout(true);
+    }, 2000); // 2 second timeout
+
+    if (fontLoaded || fontError) {
+      clearTimeout(timer);
     }
-  }, [loaded]);
 
-  if (!loaded || showSplash) {
-    return (
-      <SplashScreen 
-        onAnimationComplete={() => {
-          // Don't hide immediately, let minimum time pass
-        }} 
-      />
-    );
-  }
+    return () => clearTimeout(timer);
+  }, [fontLoaded, fontError]);
+
+  console.log('[Layout] Font loading status - loaded:', fontLoaded, 'error:', fontError, 'timeout:', fontTimeout);
+
+  // If there's a font error, timeout, or fonts loaded, we'll proceed
+  const fontsReady = fontLoaded || !!fontError || fontTimeout;
 
   return (
     <AuthProvider>
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <Stack>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="+not-found" />
-        </Stack>
+        {/* The fontLoaded status is passed down as a prop */}
+        <AppStack fontLoaded={fontsReady} />
         <StatusBar style="auto" />
       </ThemeProvider>
     </AuthProvider>
   );
 }
+

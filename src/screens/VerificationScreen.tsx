@@ -6,7 +6,10 @@ import {
   Alert,
   Image,
   TouchableOpacity,
-  StyleSheet
+  StyleSheet,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform
 } from 'react-native';
 import { TeaKEStyles } from '../constants/Styles';
 import { TeaKEButton, TeaKECard, VerificationStatusBadge } from '../components/ui';
@@ -152,7 +155,9 @@ export const VerificationScreen: React.FC = () => {
     );
   }
 
-  if (verificationStatus?.status === 'pending') {
+  // SENIOR DEVELOPER FIX: Only show pending UI if user has actually uploaded an ID
+  if (verificationStatus?.status === 'pending' && user?.id_image_url && user.id_image_url.trim() !== '') {
+    console.log('[VerificationScreen] -> Showing PENDING UI (ID uploaded and under review)');
     return (
       <SafeAreaView style={TeaKEStyles.safeContainer}>
         <View style={[TeaKEStyles.container, { justifyContent: 'center', alignItems: 'center' }]}>
@@ -169,91 +174,112 @@ export const VerificationScreen: React.FC = () => {
     );
   }
 
+  // If we reach here, show the upload UI (no ID uploaded yet or rejected)
+  console.log('[VerificationScreen] -> Showing UPLOAD UI (no ID uploaded or rejected)');
+  
   return (
     <SafeAreaView style={TeaKEStyles.safeContainer}>
-      <View style={TeaKEStyles.container}>
-        <Text style={TeaKEStyles.heading1}>Verify Your Identity</Text>
-        <Text style={TeaKEStyles.body}>
-          To keep TeaKE safe for women, we need to verify your identity. 
-          Please upload a photo of your school ID or national ID.
-        </Text>
-
-        <TeaKECard style={{ marginTop: 24 }}>
-          <Text style={[TeaKEStyles.heading2, { fontSize: 16 }]}>Choose ID Type</Text>
+      <KeyboardAvoidingView 
+        style={{ flex: 1 }} 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <ScrollView 
+          style={TeaKEStyles.container}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* DEBUG IDENTIFIER */}
+          <Text style={{ color: 'red', fontSize: 12, textAlign: 'center', marginBottom: 10 }}>
+            🔍 DEBUG: UPLOAD ID INTERFACE
+          </Text>
           
-          <View style={styles.idTypeContainer}>
-            <TouchableOpacity
-              style={[
-                styles.idTypeButton,
-                idType === 'school_id' && styles.idTypeButtonActive
-              ]}
-              onPress={() => setIdType('school_id')}
-            >
-              <Text style={[
-                styles.idTypeText,
-                idType === 'school_id' && styles.idTypeTextActive
-              ]}>
-                🎓 School ID
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.idTypeButton,
-                idType === 'national_id' && styles.idTypeButtonActive
-              ]}
-              onPress={() => setIdType('national_id')}
-            >
-              <Text style={[
-                styles.idTypeText,
-                idType === 'national_id' && styles.idTypeTextActive
-              ]}>
-                🆔 National ID
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </TeaKECard>
-
-        <TeaKECard style={{ marginTop: 16 }}>
-          <Text style={[TeaKEStyles.heading2, { fontSize: 16 }]}>Upload Photo</Text>
-          
-          {selectedImage ? (
-            <View style={{ marginTop: 12 }}>
-              <Image source={{ uri: selectedImage }} style={styles.previewImage} />
-              <TeaKEButton
-                title="Choose Different Image"
-                onPress={showImageOptions}
-                variant="secondary"
-                size="small"
-                style={{ marginTop: 12 }}
-              />
-            </View>
-          ) : (
-            <TouchableOpacity style={styles.uploadArea} onPress={showImageOptions}>
-              <Text style={styles.uploadText}>📷</Text>
-              <Text style={[TeaKEStyles.body, { textAlign: 'center' }]}>
-                Tap to upload ID photo
-              </Text>
-            </TouchableOpacity>
-          )}
-        </TeaKECard>
-
-        <View style={{ marginTop: 24 }}>
-          <Text style={[TeaKEStyles.caption, { marginBottom: 16 }]}>
-            📝 Tips for a good photo:
-            {'\n'}• Ensure all text is clearly visible
-            {'\n'}• Good lighting, no shadows
-            {'\n'}• Hold your phone steady
-            {'\n'}• Your photo will be deleted after verification
+          <Text style={TeaKEStyles.heading1}>Verify Your Identity</Text>
+          <Text style={TeaKEStyles.body}>
+            To keep TeaKE safe for women, we need to verify your identity. 
+            Please upload a photo of your school ID or national ID.
           </Text>
 
+          <TeaKECard style={{ marginTop: 24 }}>
+            <Text style={[TeaKEStyles.heading2, { fontSize: 16 }]}>Choose ID Type</Text>
+            
+            <View style={styles.idTypeContainer}>
+              <TouchableOpacity
+                style={[
+                  styles.idTypeButton,
+                  idType === 'school_id' && styles.idTypeButtonActive
+                ]}
+                onPress={() => setIdType('school_id')}
+              >
+                <Text style={[
+                  styles.idTypeText,
+                  idType === 'school_id' && styles.idTypeTextActive
+                ]}>
+                  🎓 School ID
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.idTypeButton,
+                  idType === 'national_id' && styles.idTypeButtonActive
+                ]}
+                onPress={() => setIdType('national_id')}
+              >
+                <Text style={[
+                  styles.idTypeText,
+                  idType === 'national_id' && styles.idTypeTextActive
+                ]}>
+                  🆔 National ID
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </TeaKECard>
+
+          <TeaKECard style={{ marginTop: 16 }}>
+            <Text style={[TeaKEStyles.heading2, { fontSize: 16 }]}>Upload Photo</Text>
+            
+            {selectedImage ? (
+              <View style={{ marginTop: 12 }}>
+                <Image source={{ uri: selectedImage }} style={styles.previewImage} />
+                <TeaKEButton
+                  title="Choose Different Image"
+                  onPress={showImageOptions}
+                  variant="secondary"
+                  size="small"
+                  style={{ marginTop: 12 }}
+                />
+              </View>
+            ) : (
+              <TouchableOpacity style={styles.uploadArea} onPress={showImageOptions}>
+                <Text style={styles.uploadText}>📷</Text>
+                <Text style={[TeaKEStyles.body, { textAlign: 'center' }]}>
+                  Tap to upload ID photo
+                </Text>
+              </TouchableOpacity>
+            )}
+          </TeaKECard>
+
+          <View style={styles.tipsSection}>
+            <Text style={[TeaKEStyles.caption, { marginBottom: 16 }]}>
+              📝 Tips for a good photo:
+              {'\n'}• Ensure all text is clearly visible
+              {'\n'}• Good lighting, no shadows
+              {'\n'}• Hold your phone steady
+              {'\n'}• Your photo will be deleted after verification
+            </Text>
+          </View>
+        </ScrollView>
+        
+        {/* Fixed submit button at bottom */}
+        <View style={styles.submitButtonContainer}>
           <TeaKEButton
             title={uploading ? "Uploading..." : "Submit for Verification"}
             onPress={handleUpload}
             disabled={uploading || !selectedImage}
           />
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
@@ -303,5 +329,20 @@ const styles = StyleSheet.create({
     height: 200,
     borderRadius: 8,
     resizeMode: 'contain',
+  },
+  scrollContent: {
+    paddingBottom: 20,
+  },
+  tipsSection: {
+    marginTop: 24,
+    marginBottom: 20,
+  },
+  submitButtonContainer: {
+    backgroundColor: Colors.light.background,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    paddingBottom: 34, // Extra padding for safe area
+    borderTopWidth: 1,
+    borderTopColor: Colors.light.border,
   },
 });

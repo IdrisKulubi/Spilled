@@ -38,34 +38,28 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
         }),
         Animated.spring(scaleAnim, {
           toValue: 1,
-          tension: 50,
-          friction: 8,
+          tension: 40,
+          friction: 7,
           useNativeDriver: true,
         }),
       ]),
-      // Gentle pulse effect
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(pulseAnim, {
-            toValue: 1.05,
-            duration: 1000,
-            useNativeDriver: true,
-          }),
-          Animated.timing(pulseAnim, {
-            toValue: 1,
-            duration: 1000,
-            useNativeDriver: true,
-          }),
-        ]),
-        { iterations: 2 }
-      ),
+      // A single, gentle pulse
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.05,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+      ]),
     ]);
 
     animationSequence.start(() => {
-      // Animation complete, notify parent
-      setTimeout(() => {
-        onAnimationComplete?.();
-      }, 500);
+      onAnimationComplete?.();
     });
   }, [fadeAnim, scaleAnim, pulseAnim, onAnimationComplete]);
 

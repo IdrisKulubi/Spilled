@@ -10,42 +10,31 @@ import {
   SafeAreaView, 
   ScrollView,
   TouchableOpacity,
-  StyleSheet,
-  ActivityIndicator 
+  StyleSheet
 } from 'react-native';
 import { useAuth } from '@/src/contexts/AuthContext';
-import { SignInScreen } from '@/src/screens/SignInScreen';
-import { VerificationScreen } from '@/src/screens/VerificationScreen';
 import { TeaKEStyles } from '@/src/constants/Styles';
 import { TeaKEButton, TeaKECard } from '@/src/components/ui';
 import { Colors } from '@/constants/Colors';
 
 export default function HomeScreen() {
-  const { user, loading } = useAuth();
+  const { user } = useAuth();
 
-  // Show loading spinner while checking auth state
-  if (loading) {
-    return (
-      <SafeAreaView style={[TeaKEStyles.safeContainer, styles.loadingContainer]}>
-        <ActivityIndicator size="large" color={Colors.light.primary} />
-        <Text style={[TeaKEStyles.body, { marginTop: 16, textAlign: 'center' }]}>
-          Loading TeaKE...
-        </Text>
-      </SafeAreaView>
-    );
-  }
-
-  // Show sign in screen if not authenticated
+  // Note: All authentication and verification logic is now handled in TabLayout
+  // This ensures tabs only show for fully verified users
+  
+  // If we reach this point, user should be logged in and verified
   if (!user) {
-    return <SignInScreen />;
+    console.log('[HomeScreen] No user - TabLayout should handle this');
+    return null;
   }
 
-  // Show verification screen if not verified
   if (!user.verified) {
-    return <VerificationScreen />;
+    console.log('[HomeScreen] User not verified - TabLayout should handle this');
+    return null;
   }
 
-  // Main authenticated home screen
+  // Main authenticated home screen for verified users
   return <AuthenticatedHome user={user} />;
 }
 
@@ -88,7 +77,7 @@ const AuthenticatedHome: React.FC<{ user: any }> = ({ user }) => {
               Search for a Guy
             </Text>
             <Text style={[TeaKEStyles.body, { opacity: 0.8, marginBottom: 16 }]}>
-              Look up someone you're dating or curious about
+              Look up someone you&apos;re dating or curious about
             </Text>
             <TeaKEButton 
               title="Start Search" 
