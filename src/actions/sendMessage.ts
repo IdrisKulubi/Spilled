@@ -38,6 +38,20 @@ export const sendMessage = async (messageData: SendMessageData): Promise<Message
       };
     }
 
+    // Check if user is verified
+    if (currentUser.verification_status !== 'approved') {
+      const statusMessage = currentUser.verification_status === 'pending' 
+        ? 'Your verification is still pending. Please wait for approval.'
+        : currentUser.verification_status === 'rejected'
+        ? 'Your verification was rejected. Please re-upload your ID.'
+        : 'Please verify your identity by uploading your ID to send messages.';
+      
+      return {
+        success: false,
+        error: statusMessage
+      };
+    }
+
     // Validation
     if (!messageData.text.trim()) {
       return {

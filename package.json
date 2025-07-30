@@ -20,6 +20,7 @@
     "@rneui/themed": "^4.0.0-rc.8",
     "@supabase/supabase-js": "^2.53.0",
     "expo": "~53.0.20",
+    "expo-auth-session": "^6.2.1",
     "expo-blur": "~14.1.5",
     "expo-camera": "^16.1.11",
     "expo-constants": "~17.1.7",
@@ -50,9 +51,9 @@
     "react-native-svg": "^15.12.0",
     "react-native-svg-transformer": "^1.5.1",
     "react-native-toast-message": "^2.3.3",
+    "react-native-url-polyfill": "^2.0.0",
     "react-native-web": "~0.20.0",
     "react-native-webview": "13.13.5",
-    "react-native-url-polyfill": "^2.0.0",
     "tailwindcss": "^4.1.11",
     "zod": "^4.0.14"
   },

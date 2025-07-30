@@ -35,37 +35,25 @@ This guide will walk you through setting up the TeaKE app from scratch.
 ### 1.3 Configure Authentication
 
 1. Go to **Authentication** > **Settings**
-2. Enable **Phone Auth**:
-   - Toggle "Enable phone signup" ON
-   - Set phone confirmation to ON
-3. Configure SMS Provider (choose one):
-
-   **Option A: Twilio (Recommended for Kenya)**
-   - Sign up at [twilio.com](https://twilio.com)
-   - Get your Account SID and Auth Token
-   - Buy a phone number with SMS capabilities
-   - In Supabase: Select "Twilio" and enter your credentials
-
-   **Option B: Messagebird**
-   - Similar process to Twilio
-   - Good alternative if Twilio doesn't work
-
-4. **SMS Template** (optional but recommended):
-   ```
-   Your TeaKE verification code is: {{ .Token }}
-   
-   This code expires in 10 minutes.
-   ```
+2. **Email Auth is enabled by default** - this is what we'll use
+3. Set email confirmation to **OFF** for easier testing (can enable in production)
+4. **No SMS configuration needed** - we use email + ID verification instead
 
 ### 1.4 Set Up Storage (for images)
 
 1. Go to **Storage**
-2. Create a new bucket called `story-images`
-3. Set bucket to **Public** 
-4. In **Policies**, create a policy:
+2. Create **two buckets**:
+   - `story-images` (for story attachments) - set to **Public**
+   - `id-verification` (for ID verification) - set to **Private**
+3. For `story-images` bucket policies:
    - Policy name: "Users can upload story images"
    - Target roles: `authenticated`
    - Allowed operations: `INSERT`, `SELECT`
+4. For `id-verification` bucket policies:
+   - Policy name: "Users can upload their own ID"
+   - Target roles: `authenticated`  
+   - Allowed operations: `INSERT`
+   - RLS condition: `auth.uid() = owner`
 
 ### 1.5 Get API Keys
 
@@ -119,9 +107,11 @@ npm install
 ### 3.1 Test Authentication
 
 1. Open the app
-2. Try to sign up with a Kenyan phone number (e.g., `0712345678`)
-3. You should receive an SMS with a verification code
-4. Enter the code to complete signup
+2. Try to sign up with email and password
+3. Check your email for verification (if email confirmation is enabled)
+4. Sign in with your credentials
+5. Upload a school ID or national ID for verification
+6. Wait for manual approval (in production, you'd have an admin panel)
 
 ### 3.2 Test Database Operations
 

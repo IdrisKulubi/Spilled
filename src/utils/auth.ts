@@ -4,6 +4,9 @@
 
 import { supabase, handleSupabaseError } from '../config/supabase';
 import { Database } from '../types/database';
+import * as AuthSession from 'expo-auth-session';
+import * as WebBrowser from 'expo-web-browser';
+import { Platform } from 'react-native';
 
 export type User = Database['public']['Tables']['users']['Row'];
 
@@ -13,8 +16,15 @@ export interface AuthResponse {
   error?: string;
 }
 
-export interface SignInResponse {
+export interface SignUpResponse {
   success: boolean;
+  user?: User;
+  error?: string;
+}
+
+export interface VerificationUploadResponse {
+  success: boolean;
+  uploadUrl?: string;
   error?: string;
 }
 
@@ -35,23 +45,25 @@ export const authUtils = {
     return cleaned;
   },
 
-  // Sign in with OTP (phone number)
-  signInWithOTP: async (phone: string): Promise<SignInResponse> => {
+  // Sign in with Google OAuth
+  signInWithGoogle: async (): Promise<AuthResponse> => {
     try {
-      const formattedPhone = authUtils.formatPhoneNumber(phone);
-      
-      if (!authUtils.validateKenyanPhone(formattedPhone)) {
-        return {
-          success: false,
-          error: 'Please enter a valid Kenyan phone number'
-        };
-      }
+      // Configure WebBrowser for OAuth
+      WebBrowser.maybeCompleteAuthSession();
 
-      const { error } = await supabase.auth.signInWithOtp({
-        phone: formattedPhone,
+      const redirectUrl = AuthSession.makeRedirectUri({
+        scheme: Platform.OS === 'web' ? undefined : 'teake',
+      });
+
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
         options: {
-          // Custom SMS template can be set in Supabase dashboard
-        }
+          redirectTo: redirectUrl,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+        },
       });
 
       if (error) {
@@ -61,7 +73,59 @@ export const authUtils = {
         };
       }
 
-      return { success: true };
+      // For web, the OAuth flow is handled automatically
+      if (Platform.OS === 'web') {
+        return {
+          success: true,
+        };
+      }
+
+      // For mobile, we need to open the URL
+      if (data.url) {
+        const result = await WebBrowser.openAuthSessionAsync(
+          data.url,
+          redirectUrl,
+          {
+            showInRecents: true,
+          }
+        );
+        
+        if (result.type === 'success') {
+          // For mobile OAuth, the session is automatically handled by Supabase
+          // We just need to get the current user after successful OAuth
+          const { data: { user }, error: userError } = await supabase.auth.getUser();
+          
+          if (userError || !user) {
+            return {
+              success: false,
+              error: 'Failed to get user after OAuth'
+            };
+          }
+
+          // Ensure user profile exists
+          const userProfile = await authUtils.ensureUserProfile(
+            user.id,
+            user.user_metadata?.full_name || user.email?.split('@')[0],
+            undefined, // phone - not available from Google OAuth
+            user.email
+          );
+          
+          return {
+            success: true,
+            user: userProfile
+          };
+        }
+        
+        return {
+          success: false,
+          error: 'Authentication was cancelled or failed'
+        };
+      }
+
+      return {
+        success: false,
+        error: 'Failed to initialize Google authentication'
+      };
     } catch (error) {
       return {
         success: false,
@@ -70,15 +134,67 @@ export const authUtils = {
     }
   },
 
-  // Verify OTP code
-  verifyOTP: async (phone: string, otp: string): Promise<AuthResponse> => {
+  // Sign up with email and basic info (DEPRECATED - keeping for backwards compatibility)
+  signUp: async (email: string, password: string, nickname?: string, phone?: string): Promise<SignUpResponse> => {
     try {
-      const formattedPhone = authUtils.formatPhoneNumber(phone);
+      // Validate email
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return {
+          success: false,
+          error: 'Please enter a valid email address'
+        };
+      }
+
+      // Validate phone if provided
+      if (phone && !authUtils.validateKenyanPhone(phone)) {
+        return {
+          success: false,
+          error: 'Please enter a valid Kenyan phone number'
+        };
+      }
+
+      const { data, error } = await supabase.auth.signUp({
+        email: email,
+        password: password,
+      });
+
+      if (error) {
+        return {
+          success: false,
+          error: handleSupabaseError(error)
+        };
+      }
+
+      if (!data.user) {
+        return {
+          success: false,
+          error: 'Failed to create user account'
+        };
+      }
+
+      // Create user profile
+      const formattedPhone = phone ? authUtils.formatPhoneNumber(phone) : undefined;
+      const userProfile = await authUtils.ensureUserProfile(data.user.id, nickname, formattedPhone, email);
       
-      const { data, error } = await supabase.auth.verifyOtp({
-        phone: formattedPhone,
-        token: otp,
-        type: 'sms'
+      return {
+        success: true,
+        user: userProfile
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: handleSupabaseError(error)
+      };
+    }
+  },
+
+  // Sign in with email and password (DEPRECATED - use signInWithGoogle instead)
+  signIn: async (email: string, password: string): Promise<AuthResponse> => {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email,
+        password: password,
       });
 
       if (error) {
@@ -95,12 +211,12 @@ export const authUtils = {
         };
       }
 
-      // Create or get user profile
-      const userProfile = await authUtils.ensureUserProfile(data.user.id, formattedPhone);
+      // Get user profile
+      const userProfile = await authUtils.getCurrentUser();
       
       return {
         success: true,
-        user: userProfile
+        user: userProfile || undefined
       };
     } catch (error) {
       return {
@@ -121,15 +237,15 @@ export const authUtils = {
       const { data: profile, error } = await supabase
         .from('users')
         .select('*')
-        .eq('id', user.id)
-        .single();
+        .eq('id', user.id as any) // Type assertion to bypass strict typing
+        .maybeSingle();
 
-      if (error || !profile) {
+      if (error) {
         console.error('Error fetching user profile:', error);
         return null;
       }
 
-      return profile;
+      return profile as User | null;
     } catch (error) {
       console.error('Error getting current user:', error);
       return null;
@@ -137,33 +253,147 @@ export const authUtils = {
   },
 
   // Ensure user profile exists in our users table
-  ensureUserProfile: async (userId: string, phone?: string): Promise<User> => {
+  ensureUserProfile: async (userId: string, nickname?: string, phone?: string, email?: string): Promise<User> => {
+    // First, try to get existing user
     const { data: existing, error: fetchError } = await supabase
       .from('users')
       .select('*')
-      .eq('id', userId)
-      .single();
+      .eq('id', userId as any) // Type assertion to bypass strict typing
+      .maybeSingle();
 
     if (existing && !fetchError) {
-      return existing;
+      return existing as unknown as User;
     }
 
-    // Create new user profile
+    // Create new user profile with type assertion
+    const insertData = {
+      id: userId,
+      nickname: nickname || null,
+      phone: phone || null,
+      email: email || null,
+      verified: false,
+      verification_status: 'pending' as const,
+    };
+
     const { data: newUser, error: createError } = await supabase
       .from('users')
-      .insert({
-        id: userId,
-        phone: phone,
-        verified: false,
-      })
+      .insert(insertData as any) // Type assertion to bypass strict typing
       .select()
       .single();
 
-    if (createError || !newUser) {
-      throw new Error('Failed to create user profile');
+    if (createError) {
+      throw new Error(`Failed to create user profile: ${createError.message}`);
     }
 
-    return newUser;
+    if (!newUser) {
+      throw new Error('Failed to create user profile: No data returned');
+    }
+
+    return newUser as unknown as User;
+  },
+
+  // Upload ID image for verification
+  uploadVerificationImage: async (imageUri: string, idType: 'school_id' | 'national_id'): Promise<VerificationUploadResponse> => {
+    try {
+      const currentUser = await authUtils.getCurrentUser();
+      if (!currentUser) {
+        return {
+          success: false,
+          error: 'You must be logged in to upload verification'
+        };
+      }
+
+      // Convert image to blob for upload
+      const response = await fetch(imageUri);
+      const blob = await response.blob();
+      
+      const fileName = `verification-${currentUser.id}-${Date.now()}.jpg`;
+      const filePath = `id-verification/${fileName}`;
+
+      // Upload to Supabase Storage
+      const { data, error } = await supabase.storage
+        .from('id-verification')
+        .upload(filePath, blob, {
+          contentType: 'image/jpeg',
+          upsert: false
+        });
+
+      if (error) {
+        return {
+          success: false,
+          error: handleSupabaseError(error)
+        };
+      }
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('id-verification')
+        .getPublicUrl(data.path);
+
+      // Update user profile with ID image
+      const updateData = {
+        id_image_url: publicUrl,
+        id_type: idType,
+        verification_status: 'pending' as const
+      };
+
+      const { error: updateError } = await supabase
+        .from('users')
+        .update(updateData as any) // Type assertion to bypass strict typing
+        .eq('id', currentUser.id as any); // Type assertion for ID
+
+      if (updateError) {
+        console.error('Failed to update user profile:', updateError);
+      }
+
+      if (updateError) {
+        return {
+          success: false,
+          error: handleSupabaseError(updateError)
+        };
+      }
+
+      return {
+        success: true,
+        uploadUrl: publicUrl
+      };
+    } catch (error) {
+      console.error('Error uploading verification image:', error);
+      return {
+        success: false,
+        error: 'Failed to upload verification image. Please try again.'
+      };
+    }
+  },
+
+  // Check verification status
+  getVerificationStatus: async (): Promise<{
+    status: 'pending' | 'approved' | 'rejected';
+    reason?: string;
+  } | null> => {
+    try {
+      const currentUser = await authUtils.getCurrentUser();
+      if (!currentUser) return null;
+
+      return {
+        status: currentUser.verification_status,
+        reason: currentUser.rejection_reason || undefined,
+      };
+    } catch (error) {
+      console.error('Error getting verification status:', error);
+      return null;
+    }
+  },
+
+  // Check if user can post (is verified)
+  canUserPost: async (): Promise<boolean> => {
+    try {
+      const currentUser = await authUtils.getCurrentUser();
+      return currentUser?.verification_status === 'approved';
+    } catch (error) {
+      console.error('Error checking user post permission:', error);
+      return false;
+    }
   },
 
   // Update user profile
@@ -177,23 +407,33 @@ export const authUtils = {
         };
       }
 
+      // Create a clean update object, removing undefined values and id
+      const { id, created_at, ...cleanUpdates } = updates;
+      
       const { data: updatedUser, error } = await supabase
         .from('users')
-        .update(updates)
-        .eq('id', currentUser.id)
+        .update(cleanUpdates as any) // Type assertion to bypass strict typing
+        .eq('id', currentUser.id as any) // Type assertion for ID
         .select()
         .single();
 
-      if (error || !updatedUser) {
+      if (error) {
         return {
           success: false,
           error: handleSupabaseError(error)
         };
       }
 
+      if (!updatedUser) {
+        return {
+          success: false,
+          error: 'Failed to update user profile'
+        };
+      }
+
       return {
         success: true,
-        user: updatedUser
+        user: updatedUser as unknown as User
       };
     } catch (error) {
       return {
@@ -204,7 +444,7 @@ export const authUtils = {
   },
 
   // Sign out
-  signOut: async (): Promise<SignInResponse> => {
+  signOut: async (): Promise<{ success: boolean; error?: string }> => {
     try {
       const { error } = await supabase.auth.signOut();
       

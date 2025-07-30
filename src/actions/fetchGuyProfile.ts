@@ -168,6 +168,20 @@ export const addComment = async (storyId: string, text: string, anonymous: boole
       };
     }
 
+    // Check if user is verified
+    if (currentUser.verification_status !== 'approved') {
+      const statusMessage = currentUser.verification_status === 'pending' 
+        ? 'Your verification is still pending. Please wait for approval.'
+        : currentUser.verification_status === 'rejected'
+        ? 'Your verification was rejected. Please re-upload your ID.'
+        : 'Please verify your identity by uploading your ID to comment.';
+      
+      return {
+        success: false,
+        error: statusMessage
+      };
+    }
+
     if (!text.trim()) {
       return {
         success: false,

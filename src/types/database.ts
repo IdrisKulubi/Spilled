@@ -20,24 +20,39 @@ export interface Database {
           id: string
           phone?: string | null
           email?: string | null
-          verified: boolean
           nickname?: string | null
+          verified: boolean
+          verification_status: 'pending' | 'approved' | 'rejected'
+          id_image_url?: string | null
+          id_type?: 'school_id' | 'national_id' | null
+          rejection_reason?: string | null
+          verified_at?: string | null
           created_at: string
         }
         Insert: {
           id?: string
           phone?: string | null
           email?: string | null
-          verified?: boolean
           nickname?: string | null
+          verified?: boolean
+          verification_status?: 'pending' | 'approved' | 'rejected'
+          id_image_url?: string | null
+          id_type?: 'school_id' | 'national_id' | null
+          rejection_reason?: string | null
+          verified_at?: string | null
           created_at?: string
         }
         Update: {
           id?: string
           phone?: string | null
           email?: string | null
-          verified?: boolean
           nickname?: string | null
+          verified?: boolean
+          verification_status?: 'pending' | 'approved' | 'rejected'
+          id_image_url?: string | null
+          id_type?: 'school_id' | 'national_id' | null
+          rejection_reason?: string | null
+          verified_at?: string | null
           created_at?: string
         }
         Relationships: []
@@ -224,6 +239,8 @@ export interface Database {
     }
     Enums: {
       tag_type: 'red_flag' | 'good_vibes' | 'unsure'
+      verification_status: 'pending' | 'approved' | 'rejected'
+      id_type: 'school_id' | 'national_id'
     }
     CompositeTypes: {
       [_ in never]: never

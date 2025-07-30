@@ -32,13 +32,13 @@ A React Native app built with Expo that helps Kenyan women discreetly check if t
 
 ### 4. Install Dependencies
 
-```bash
-npm install
-```
+   ```bash
+   npm install
+   ```
 
 ### 5. Run the App
 
-```bash
+   ```bash
 # Start Expo development server
 npm start
 
@@ -55,14 +55,15 @@ npm run web     # Web browser
 - **📝 Anonymous posting** about dating experiences
 - **💬 Private messaging** with end-to-end encryption
 - **🏷️ Tag system**: Red flags 🚩, Good vibes ✅, Unsure ❓
-- **🔒 Phone verification** with Kenyan number support
+- **🆔 ID verification** with school ID or national ID upload
 
 ### Security & Privacy
+- **ID verification required** - Only verified women can post/comment/message
 - End-to-end encrypted messages
 - Messages auto-delete after 7 days
 - Anonymous posting by default
 - Row-level security in database
-- Optional phone verification
+- Manual verification process for user safety
 
 ## 🏗️ Architecture
 
@@ -143,13 +144,16 @@ src/
 ```typescript
 import { useAuth } from '../contexts/AuthContext';
 
-const { user, signInWithOTP, verifyOTP } = useAuth();
+const { user, signUp, signIn, uploadVerificationImage } = useAuth();
 
-// Send OTP
-await signInWithOTP('+254712345678');
+// Sign up with email
+await signUp('user@example.com', 'password123', 'nickname', '0712345678');
 
-// Verify OTP
-await verifyOTP('+254712345678', '123456');
+// Sign in
+await signIn('user@example.com', 'password123');
+
+// Upload ID for verification
+await uploadVerificationImage(imageUri, 'school_id');
 ```
 
 ### Database Operations

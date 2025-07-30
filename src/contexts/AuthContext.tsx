@@ -9,10 +9,14 @@ import { authUtils, User } from '../utils/auth';
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  signInWithOTP: (phone: string) => Promise<{ success: boolean; error?: string }>;
-  verifyOTP: (phone: string, otp: string) => Promise<{ success: boolean; error?: string }>;
+  signInWithGoogle: () => Promise<{ success: boolean; error?: string; user?: User }>;
+  signUp: (email: string, password: string, nickname?: string, phone?: string) => Promise<{ success: boolean; error?: string; user?: User }>;
+  signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string; user?: User }>;
   signOut: () => Promise<{ success: boolean; error?: string }>;
   updateProfile: (updates: Partial<User>) => Promise<{ success: boolean; error?: string }>;
+  uploadVerificationImage: (imageUri: string, idType: 'school_id' | 'national_id') => Promise<{ success: boolean; error?: string }>;
+  getVerificationStatus: () => Promise<{ status: 'pending' | 'approved' | 'rejected'; reason?: string } | null>;
+  canUserPost: () => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -59,24 +63,41 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
   }, []);
 
-  const signInWithOTP = async (phone: string) => {
+  const signInWithGoogle = async () => {
     setLoading(true);
     try {
-      const result = await authUtils.signInWithOTP(phone);
-      return result;
+      const result = await authUtils.signInWithGoogle();
+      if (result.success && result.user) {
+        setUser(result.user);
+      }
+      return { success: result.success, error: result.error, user: result.user };
     } finally {
       setLoading(false);
     }
   };
 
-  const verifyOTP = async (phone: string, otp: string) => {
+  // Deprecated functions - keeping for backwards compatibility
+  const signUp = async (email: string, password: string, nickname?: string, phone?: string) => {
     setLoading(true);
     try {
-      const result = await authUtils.verifyOTP(phone, otp);
+      const result = await authUtils.signUp(email, password, nickname, phone);
       if (result.success && result.user) {
         setUser(result.user);
       }
-      return { success: result.success, error: result.error };
+      return { success: result.success, error: result.error, user: result.user };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const signIn = async (email: string, password: string) => {
+    setLoading(true);
+    try {
+      const result = await authUtils.signIn(email, password);
+      if (result.success && result.user) {
+        setUser(result.user);
+      }
+      return { success: result.success, error: result.error, user: result.user };
     } finally {
       setLoading(false);
     }
@@ -107,13 +128,41 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const uploadVerificationImage = async (imageUri: string, idType: 'school_id' | 'national_id') => {
+    try {
+      const result = await authUtils.uploadVerificationImage(imageUri, idType);
+      // Refresh user data after upload
+      if (result.success) {
+        const updatedUser = await authUtils.getCurrentUser();
+        if (updatedUser) {
+          setUser(updatedUser);
+        }
+      }
+      return { success: result.success, error: result.error };
+    } catch (error) {
+      return { success: false, error: 'Failed to upload verification image' };
+    }
+  };
+
+  const getVerificationStatus = async () => {
+    return await authUtils.getVerificationStatus();
+  };
+
+  const canUserPost = async () => {
+    return await authUtils.canUserPost();
+  };
+
   const value: AuthContextType = {
     user,
     loading,
-    signInWithOTP,
-    verifyOTP,
+    signInWithGoogle,
+    signUp,
+    signIn,
     signOut,
     updateProfile,
+    uploadVerificationImage,
+    getVerificationStatus,
+    canUserPost,
   };
 
   return (

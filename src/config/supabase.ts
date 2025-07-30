@@ -16,6 +16,8 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
+    // Configure OAuth redirects
+    redirectTo: `${process.env.EXPO_PUBLIC_SCHEME || 'teake'}://`,
   },
 });
 

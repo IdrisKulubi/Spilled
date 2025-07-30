@@ -10,10 +10,15 @@ CREATE TYPE tag_type AS ENUM ('red_flag', 'good_vibes', 'unsure');
 -- Users table
 CREATE TABLE users (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    phone TEXT UNIQUE,
+    phone TEXT,
     email TEXT UNIQUE,
-    verified BOOLEAN DEFAULT FALSE,
     nickname TEXT,
+    verified BOOLEAN DEFAULT FALSE,
+    verification_status TEXT DEFAULT 'pending' CHECK (verification_status IN ('pending', 'approved', 'rejected')),
+    id_image_url TEXT, -- URL to uploaded school/national ID image
+    id_type TEXT CHECK (id_type IN ('school_id', 'national_id')),
+    rejection_reason TEXT, -- Reason if verification was rejected
+    verified_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -84,26 +89,43 @@ CREATE POLICY "Users can view own profile" ON users
 CREATE POLICY "Users can update own profile" ON users
     FOR UPDATE USING (auth.uid() = id);
 
+-- Only verified users can create posts, comments, and send messages
+CREATE POLICY "Only verified users can create guys" ON guys
+    FOR INSERT WITH CHECK (
+        auth.role() = 'authenticated' AND 
+        EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND verification_status = 'approved')
+    );
+
+CREATE POLICY "Only verified users can create stories" ON stories
+    FOR INSERT WITH CHECK (
+        auth.role() = 'authenticated' AND 
+        EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND verification_status = 'approved')
+    );
+
+CREATE POLICY "Only verified users can create comments" ON comments
+    FOR INSERT WITH CHECK (
+        auth.role() = 'authenticated' AND 
+        EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND verification_status = 'approved')
+    );
+
+CREATE POLICY "Only verified users can send messages" ON messages
+    FOR INSERT WITH CHECK (
+        auth.role() = 'authenticated' AND 
+        auth.uid() = sender_id AND
+        EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND verification_status = 'approved')
+    );
+
 -- Anyone can read guys (public information)
 CREATE POLICY "Anyone can view guys" ON guys
     FOR SELECT USING (true);
-
-CREATE POLICY "Authenticated users can create guys" ON guys
-    FOR INSERT WITH CHECK (auth.role() = 'authenticated');
 
 -- Anyone can read stories (public information)
 CREATE POLICY "Anyone can view stories" ON stories
     FOR SELECT USING (true);
 
-CREATE POLICY "Authenticated users can create stories" ON stories
-    FOR INSERT WITH CHECK (auth.role() = 'authenticated');
-
 -- Anyone can read comments (public information)  
 CREATE POLICY "Anyone can view comments" ON comments
     FOR SELECT USING (true);
-
-CREATE POLICY "Authenticated users can create comments" ON comments
-    FOR INSERT WITH CHECK (auth.role() = 'authenticated');
 
 -- Messages are private - only sender and receiver can see
 CREATE POLICY "Users can view own messages" ON messages
