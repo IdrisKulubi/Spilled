@@ -23,9 +23,11 @@ import { TeaKEButton, TeaKECard, StatusTag } from '@/src/components/ui';
 import { Colors } from '@/constants/Colors';
 import { searchGuys, GuyProfile } from '@/src/actions/fetchGuyProfile';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 
 export default function SearchScreen() {
   const { user } = useAuth();
+  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
   const [nameField, setNameField] = useState('');
   const [phoneField, setPhoneField] = useState('');
@@ -201,8 +203,7 @@ export default function SearchScreen() {
             <TeaKEButton
               title="Be the First to Share"
               onPress={() => {
-                // TODO: Navigate to add post with pre-filled name
-                Alert.alert('Coming Soon', 'Add post functionality is being developed!');
+                router.push('/add-post');
               }}
               variant="secondary"
               size="small"

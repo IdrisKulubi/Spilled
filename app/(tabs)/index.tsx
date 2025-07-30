@@ -16,6 +16,7 @@ import { useAuth } from '@/src/contexts/AuthContext';
 import { TeaKEStyles } from '@/src/constants/Styles';
 import { TeaKEButton, TeaKECard } from '@/src/components/ui';
 import { Colors } from '@/constants/Colors';
+import { useRouter } from 'expo-router';
 
 export default function HomeScreen() {
   const { user } = useAuth();
@@ -41,6 +42,7 @@ export default function HomeScreen() {
 // Main dashboard for verified users
 const AuthenticatedHome: React.FC<{ user: any }> = ({ user }) => {
   const { signOut } = useAuth();
+  const router = useRouter();
 
   const handleSignOut = async () => {
     await signOut();
@@ -100,8 +102,7 @@ const AuthenticatedHome: React.FC<{ user: any }> = ({ user }) => {
             <TeaKEButton 
               title="Add Post" 
               onPress={() => {
-                // TODO: Navigate to add post screen
-                console.log('Navigate to add post');
+                router.push('/add-post');
               }}
               size="small"
               variant="secondary"

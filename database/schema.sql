@@ -66,6 +66,16 @@ CREATE TABLE messages (
     expires_at TIMESTAMP WITH TIME ZONE DEFAULT (NOW() + INTERVAL '7 days')
 );
 
+-- Story reactions table (likes/reactions to stories)
+CREATE TABLE story_reactions (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    story_id UUID NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    reaction_type tag_type NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(story_id, user_id) -- One reaction per user per story
+);
+
 -- Create indexes for better performance
 CREATE INDEX idx_guys_phone ON guys(phone);
 CREATE INDEX idx_guys_name ON guys(name);
@@ -74,6 +84,8 @@ CREATE INDEX idx_stories_created_at ON stories(created_at DESC);
 CREATE INDEX idx_comments_story_id ON comments(story_id);
 CREATE INDEX idx_messages_sender_receiver ON messages(sender_id, receiver_id);
 CREATE INDEX idx_messages_expires_at ON messages(expires_at);
+CREATE INDEX idx_story_reactions_story_id ON story_reactions(story_id);
+CREATE INDEX idx_story_reactions_user_id ON story_reactions(user_id);
 
 -- Row Level Security (RLS) policies
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
@@ -81,6 +93,7 @@ ALTER TABLE guys ENABLE ROW LEVEL SECURITY;
 ALTER TABLE stories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE comments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE story_reactions ENABLE ROW LEVEL SECURITY;
 
 -- Users can only read their own profile
 CREATE POLICY "Users can view own profile" ON users
@@ -133,6 +146,23 @@ CREATE POLICY "Users can view own messages" ON messages
 
 CREATE POLICY "Authenticated users can send messages" ON messages
     FOR INSERT WITH CHECK (auth.role() = 'authenticated' AND auth.uid() = sender_id);
+
+-- Story reactions policies
+CREATE POLICY "Anyone can view reactions" ON story_reactions
+    FOR SELECT USING (true);
+
+CREATE POLICY "Only verified users can react" ON story_reactions
+    FOR INSERT WITH CHECK (
+        auth.role() = 'authenticated' AND 
+        auth.uid() = user_id AND
+        EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND verification_status = 'approved')
+    );
+
+CREATE POLICY "Users can update own reactions" ON story_reactions
+    FOR UPDATE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own reactions" ON story_reactions
+    FOR DELETE USING (auth.uid() = user_id);
 
 -- Function to automatically delete expired messages
 CREATE OR REPLACE FUNCTION delete_expired_messages()

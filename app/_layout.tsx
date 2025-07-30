@@ -27,6 +27,20 @@ function AppStack({ fontLoaded }: { fontLoaded: boolean }) {
   return (
     <Stack>
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen 
+        name="add-post" 
+        options={{ 
+          title: 'Share Your Story',
+          headerShown: true,
+          presentation: 'modal',
+          headerTitleStyle: {
+            color: '#D96BA0'
+          },
+          headerStyle: {
+            backgroundColor: '#FFF8F9'
+          }
+        }} 
+      />
       <Stack.Screen name="+not-found" />
     </Stack>
   );

@@ -1,56 +1,210 @@
-import React from 'react';
-import { View, Text, SafeAreaView, ScrollView, StyleSheet } from 'react-native';
-import { TeaKEStyles } from '@/src/constants/Styles';
+import React, { useState, useEffect, useCallback } from 'react';
+import { 
+  View, 
+  Text, 
+  SafeAreaView, 
+  FlatList, 
+  StyleSheet, 
+  RefreshControl,
+  ActivityIndicator,
+  Alert 
+} from 'react-native';
+import { useAuth } from '@/src/contexts/AuthContext';
+import { TeaKEStyles, Spacing } from '@/src/constants/Styles';
 import { TeaKECard } from '@/src/components/ui';
 import { Colors } from '@/constants/Colors';
 import { MaterialIcons } from '@expo/vector-icons';
+import { StoryCard } from '@/src/components/StoryCard';
+import { CommentsBottomSheet } from '@/src/components/CommentsBottomSheet';
+import { 
+  fetchStoriesFeed, 
+  reactToStory, 
+  StoryFeedItem, 
+  ReactionType 
+} from '@/src/actions/fetchStoriesFeed';
 
 export default function ExploreScreen() {
-  return (
-    <SafeAreaView style={[TeaKEStyles.safeContainer, styles.container]}>
-      <ScrollView style={TeaKEStyles.container} showsVerticalScrollIndicator={false}>
-        
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={[TeaKEStyles.h1, styles.title]}>Explore</Text>
-          <Text style={[TeaKEStyles.body, styles.subtitle]}>
-            Discover trending topics and popular stories
+  const { user } = useAuth();
+  const [stories, setStories] = useState<StoryFeedItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [reacting, setReacting] = useState<string | null>(null);
+  const [commentBottomSheetStory, setCommentBottomSheetStory] = useState<StoryFeedItem | null>(null);
+
+  // Load initial stories
+  const loadStories = useCallback(async (refresh = false) => {
+    try {
+      if (refresh) {
+        setRefreshing(true);
+      } else if (stories.length === 0) {
+        setLoading(true);
+      }
+
+      const response = await fetchStoriesFeed(20, 0);
+      
+      if (response.success) {
+        setStories(response.stories);
+      } else {
+        Alert.alert('Error', response.error || 'Failed to load stories');
+      }
+    } catch (error) {
+      console.error('Error loading stories:', error);
+      Alert.alert('Error', 'Something went wrong while loading stories');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [stories.length]);
+
+  // Load more stories (pagination)
+  const loadMoreStories = useCallback(async () => {
+    if (loadingMore || stories.length === 0) return;
+
+    setLoadingMore(true);
+    try {
+      const response = await fetchStoriesFeed(20, stories.length);
+      
+      if (response.success && response.stories.length > 0) {
+        setStories(prev => [...prev, ...response.stories]);
+      }
+    } catch (error) {
+      console.error('Error loading more stories:', error);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [stories.length, loadingMore]);
+
+  // Handle story reaction
+  const handleReaction = useCallback(async (storyId: string, reactionType: ReactionType) => {
+    if (!user) {
+      Alert.alert('Login Required', 'Please log in to react to stories');
+      return;
+    }
+
+    setReacting(storyId);
+    try {
+      const response = await reactToStory(storyId, reactionType);
+      
+      if (response.success) {
+        // Refresh the stories to get updated reaction counts
+        await loadStories(true);
+      } else {
+        Alert.alert('Error', response.error || 'Failed to react to story');
+      }
+    } catch (error) {
+      console.error('Error reacting to story:', error);
+      Alert.alert('Error', 'Something went wrong');
+    } finally {
+      setReacting(null);
+    }
+  }, [user, loadStories]);
+
+  // Handle comment bottom sheet
+  const handleComment = useCallback((story: StoryFeedItem) => {
+    if (!user) {
+      Alert.alert('Login Required', 'Please log in to add comments');
+      return;
+    }
+    setCommentBottomSheetStory(story);
+  }, [user]);
+
+  // Handle comment added
+  const handleCommentAdded = useCallback(async () => {
+    await loadStories(true);
+  }, [loadStories]);
+
+  // Initial load
+  useEffect(() => {
+    loadStories();
+  }, []);
+
+  // Render story item
+  const renderStoryItem = ({ item }: { item: StoryFeedItem }) => (
+    <StoryCard
+      story={item}
+      onReaction={handleReaction}
+      onComment={handleComment}
+      isReacting={reacting === item.id}
+    />
+  );
+
+  // Render empty state
+  const renderEmptyState = () => (
+    <View style={styles.emptyContainer}>
+      <TeaKECard style={styles.emptyCard}>
+        <MaterialIcons name="forum" size={64} color={Colors.light.primary} />
+        <Text style={styles.emptyTitle}>No Stories Yet</Text>
+        <Text style={styles.emptyDescription}>
+          Be the first to share your story and help build this supportive community.
+        </Text>
+        <View style={styles.encouragementSection}>
+          <MaterialIcons name="favorite" size={20} color={Colors.light.primary} />
+          <Text style={styles.encouragementText}>
+            Every story shared helps another woman stay safe. Your experience matters.
           </Text>
         </View>
+      </TeaKECard>
+    </View>
+  );
 
-        {/* Coming Soon Card */}
-        <TeaKECard style={styles.comingSoonCard}>
-          <View style={styles.iconContainer}>
-            <MaterialIcons name="explore" size={48} color={Colors.light.primary} />
-          </View>
-          <Text style={[TeaKEStyles.h3, styles.comingSoonTitle]}>
-            Coming Soon!
-          </Text>
-          <Text style={[TeaKEStyles.body, styles.comingSoonDescription]}>
-            The Explore section is under development. Soon you'll be able to discover:
-          </Text>
-          
-          <View style={styles.featureList}>
-            <View style={styles.featureItem}>
-              <MaterialIcons name="trending-up" size={16} color={Colors.light.success} />
-              <Text style={styles.featureText}>Trending stories and discussions</Text>
-            </View>
-            <View style={styles.featureItem}>
-              <MaterialIcons name="tag" size={16} color={Colors.light.success} />
-              <Text style={styles.featureText}>Popular tags and topics</Text>
-            </View>
-            <View style={styles.featureItem}>
-              <MaterialIcons name="people" size={16} color={Colors.light.success} />
-              <Text style={styles.featureText}>Most active community members</Text>
-            </View>
-            <View style={styles.featureItem}>
-              <MaterialIcons name="star" size={16} color={Colors.light.success} />
-              <Text style={styles.featureText}>Curated content recommendations</Text>
-            </View>
-          </View>
-        </TeaKECard>
+  // Render footer loading
+  const renderFooter = () => {
+    if (!loadingMore) return null;
+    return (
+      <View style={styles.footerLoader}>
+        <ActivityIndicator size="small" color={Colors.light.primary} />
+      </View>
+    );
+  };
 
-      </ScrollView>
+
+
+  return (
+    <SafeAreaView style={[TeaKEStyles.safeContainer, styles.container]}>
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.title}>Community Stories</Text>
+        <Text style={styles.subtitle}>
+          Real experiences shared by women to help women
+        </Text>
+      </View>
+
+      {/* Stories Feed */}
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={Colors.light.primary} />
+          <Text style={styles.loadingText}>Loading stories...</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={stories}
+          renderItem={renderStoryItem}
+          keyExtractor={(item) => item.id}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => loadStories(true)}
+              tintColor={Colors.light.primary}
+            />
+          }
+          onEndReached={loadMoreStories}
+          onEndReachedThreshold={0.1}
+          ListFooterComponent={renderFooter}
+          ListEmptyComponent={renderEmptyState}
+          contentContainerStyle={stories.length === 0 ? { flex: 1 } : { paddingBottom: 20 }}
+          style={{ marginHorizontal: 0 }}
+        />
+      )}
+
+      {/* Comments Bottom Sheet */}
+      <CommentsBottomSheet
+        visible={!!commentBottomSheetStory}
+        story={commentBottomSheetStory}
+        onClose={() => setCommentBottomSheetStory(null)}
+        onCommentAdded={handleCommentAdded}
+      />
     </SafeAreaView>
   );
 }
@@ -60,52 +214,76 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.background,
   },
   header: {
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 32,
+    paddingHorizontal: Spacing.md,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.lg,
+    backgroundColor: Colors.light.cardBackground,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.light.border,
   },
   title: {
-    marginBottom: 8,
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: Colors.light.text,
+    marginBottom: 4,
   },
   subtitle: {
-    color: Colors.light.secondary,
+    fontSize: 14,
+    color: Colors.light.textSecondary,
+    lineHeight: 20,
   },
-  comingSoonCard: {
-    marginHorizontal: 24,
-    alignItems: 'center',
-    paddingVertical: 40,
-  },
-  iconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: Colors.light.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 24,
-  },
-  comingSoonTitle: {
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  comingSoonDescription: {
-    textAlign: 'center',
-    marginBottom: 32,
-    lineHeight: 22,
-  },
-  featureList: {
-    alignSelf: 'stretch',
-    gap: 16,
-  },
-  featureItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-  },
-  featureText: {
+  loadingContainer: {
     flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: Spacing.xl,
+  },
+  loadingText: {
     fontSize: 16,
+    color: Colors.light.textSecondary,
+    marginTop: Spacing.sm,
+  },
+  footerLoader: {
+    paddingVertical: Spacing.md,
+    alignItems: 'center',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.md,
+  },
+  emptyCard: {
+    alignItems: 'center',
+    paddingVertical: Spacing.xl,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: '600',
     color: Colors.light.text,
-    lineHeight: 22,
+    marginTop: Spacing.md,
+    marginBottom: Spacing.sm,
+  },
+  emptyDescription: {
+    fontSize: 14,
+    color: Colors.light.textSecondary,
+    textAlign: 'center',
+    marginBottom: Spacing.lg,
+    lineHeight: 20,
+  },
+  encouragementSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.light.accent,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: 12,
+  },
+  encouragementText: {
+    fontSize: 13,
+    color: Colors.light.text,
+    marginLeft: Spacing.sm,
+    flex: 1,
+    lineHeight: 18,
+    textAlign: 'center',
   },
 });
