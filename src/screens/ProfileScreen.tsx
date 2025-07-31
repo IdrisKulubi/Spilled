@@ -21,7 +21,7 @@ import { useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 
 export const ProfileScreen: React.FC = () => {
-  const { user, updateProfile, signOut } = useAuth();
+  const { user, updateProfile, signOut, isAdmin } = useAuth();
   const router = useRouter();
 
   const [nickname, setNickname] = useState(user?.nickname || '');
@@ -54,6 +54,10 @@ export const ProfileScreen: React.FC = () => {
   const handleSignOut = async () => {
     await signOut();
     router.replace('/');
+  };
+
+  const handleAdminAccess = () => {
+    router.push('/admin');
   };
 
   return (
@@ -121,6 +125,25 @@ export const ProfileScreen: React.FC = () => {
 
         <View style={{ flex: 1 }} />
 
+        {/* Admin Access Button - Only visible for admin users */}
+        {isAdmin && (
+          <TeaKECard style={styles.adminCard}>
+            <View style={styles.adminHeader}>
+              <MaterialIcons name="admin-panel-settings" size={24} color={Colors.light.primary} />
+              <Text style={styles.adminTitle}>Admin Access</Text>
+            </View>
+            <Text style={styles.adminDescription}>
+              Manage user verifications and app administration
+            </Text>
+            <TeaKEButton
+              title="Open Admin Dashboard"
+              onPress={handleAdminAccess}
+              variant="primary"
+              style={styles.adminButton}
+            />
+          </TeaKECard>
+        )}
+
         <TeaKEButton
           title="Sign Out"
           onPress={handleSignOut}
@@ -158,5 +181,30 @@ const styles = StyleSheet.create({
   },
   input: {
     fontSize: 16,
+  },
+  adminCard: {
+    marginTop: Spacing.lg,
+    marginBottom: Spacing.md,
+    backgroundColor: Colors.light.accent,
+  },
+  adminHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: Spacing.sm,
+  },
+  adminTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: Colors.light.primary,
+    marginLeft: Spacing.sm,
+  },
+  adminDescription: {
+    fontSize: 14,
+    color: Colors.light.textSecondary,
+    marginBottom: Spacing.md,
+    lineHeight: 20,
+  },
+  adminButton: {
+    backgroundColor: Colors.light.primary,
   },
 });

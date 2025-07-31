@@ -5,11 +5,13 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { authUtils, User } from '../utils/auth';
+import { isUserAdmin } from '../config/supabase';
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
   profileLoading: boolean;
+  isAdmin: boolean;
   signInWithGoogle: () => Promise<{ success: boolean; error?: string; user?: User }>;
   signUp: (email: string, password: string, nickname?: string, phone?: string) => Promise<{ success: boolean; error?: string; user?: User }>;
   signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string; user?: User }>;
@@ -39,6 +41,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     // Check for existing session on app start
@@ -46,6 +49,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       try {
         const currentUser = await authUtils.getCurrentUser();
         setUser(currentUser);
+        
+        // Check if user is admin
+        if (currentUser?.email) {
+          const adminStatus = isUserAdmin(currentUser.email);
+          setIsAdmin(adminStatus);
+          console.log(`[AuthContext] Admin status: ${adminStatus} for ${currentUser.email}`);
+        } else {
+          setIsAdmin(false);
+        }
       } catch (error) {
         console.error('Error checking user:', error);
       } finally {
@@ -75,11 +87,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           rejection_reason: null,
           verified_at: null,
         } as any);
+        
+        // Check admin status for provisional user
+        if (session.user.email) {
+          const adminStatus = isUserAdmin(session.user.email);
+          setIsAdmin(adminStatus);
+          console.log(`[AuthContext] Admin status for provisional user: ${adminStatus} for ${session.user.email}`);
+        } else {
+          setIsAdmin(false);
+        }
+        
         console.log('[Auth] Provisional user set, auth loading is complete.');
         setLoading(false);
       } else if (event === 'SIGNED_OUT') {
         console.log('[Auth] User signed out, clearing user state');
         setUser(null);
+        setIsAdmin(false);
         setLoading(false);
       } else {
         // For any other auth events, ensure loading is false
@@ -240,6 +263,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     user,
     loading,
     profileLoading,
+    isAdmin,
     signInWithGoogle,
     signUp,
     signIn,

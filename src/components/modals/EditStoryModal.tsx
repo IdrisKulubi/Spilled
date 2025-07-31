@@ -124,7 +124,7 @@ export const EditStoryModal: React.FC<EditStoryModalProps> = ({
   const pickImage = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [4, 3],
         quality: 0.8,
@@ -134,6 +134,7 @@ export const EditStoryModal: React.FC<EditStoryModalProps> = ({
         setImageUri(result.assets[0].uri);
       }
     } catch (error) {
+      console.error('Image picker error:', error);
       Alert.alert('Error', 'Failed to pick image. Please try again.');
     }
   };
@@ -141,6 +142,7 @@ export const EditStoryModal: React.FC<EditStoryModalProps> = ({
   const takePhoto = async () => {
     try {
       const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [4, 3],
         quality: 0.8,
@@ -267,7 +269,7 @@ export const EditStoryModal: React.FC<EditStoryModalProps> = ({
             {/* Guy Information Section */}
             <TeaKECard style={styles.section}>
               <Text style={styles.sectionTitle}>👤 Who is this about?</Text>
-              <Text style={styles.sectionSubtitle}>Update the person's details</Text>
+              <Text style={styles.sectionSubtitle}>Update the person&apos;s details</Text>
 
               <TextInput
                 style={styles.input}

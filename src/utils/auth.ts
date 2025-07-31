@@ -56,10 +56,6 @@ export const authUtils = {
         path: Platform.OS !== 'web' ? 'redirect' : undefined,
       });
 
-      console.log('🔗 [OAuth] Platform:', Platform.OS);
-      console.log('🔗 [OAuth] Generated Redirect URL:', redirectUrl);
-      console.log('🔗 [OAuth] Add this URL to Supabase Dashboard → Authentication → URL Configuration → Redirect URLs');
-      console.log('🔗 [OAuth] ⚠️  IMPORTANT: Copy the URL above and add it to Supabase! ⚠️');
 
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -484,7 +480,7 @@ export const authUtils = {
       const blob = await response.blob();
       
       const fileName = `verification-${currentUser.id}-${Date.now()}.jpg`;
-      const filePath = `id-verification/${fileName}`;
+      const filePath = fileName; // Remove the folder prefix since it's already in the bucket name
 
       // Upload to Supabase Storage
       const { data, error } = await supabase.storage

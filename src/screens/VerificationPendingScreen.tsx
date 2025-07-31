@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { TeaKEStyles } from '@/src/constants/Styles';
-import { TeaKEButton, TeaKECard } from '@/src/components/ui';
+import {  TeaKECard } from '@/src/components/ui';
 import { Colors } from '@/constants/Colors';
 import { useAuth } from '@/src/contexts/AuthContext';
 
@@ -43,10 +43,10 @@ export const VerificationPendingScreen: React.FC<VerificationPendingScreenProps>
           <View style={styles.iconContainer}>
             <MaterialIcons name="pending" size={64} color={Colors.light.primary} />
           </View>
-          <Text style={[TeaKEStyles.h1, styles.title]}>
+          <Text style={styles.title}>
             Verification Pending
           </Text>
-          <Text style={[TeaKEStyles.body, styles.subtitle]}>
+          <Text style={styles.subtitle}>
             Hi {user.nickname}! Your ID is being reviewed
           </Text>
         </View>
@@ -55,12 +55,12 @@ export const VerificationPendingScreen: React.FC<VerificationPendingScreenProps>
         <TeaKECard style={styles.statusCard}>
           <View style={styles.statusHeader}>
             <MaterialIcons name="upload-file" size={24} color={Colors.light.primary} />
-            <Text style={[TeaKEStyles.h3, styles.statusTitle]}>
+            <Text style={styles.statusTitle}>
               ID Submitted Successfully
             </Text>
           </View>
           
-          <Text style={[TeaKEStyles.body, styles.statusDescription]}>
+          <Text style={styles.statusDescription}>
             Your {user.id_type === 'school_id' ? 'School ID' : 'National ID'} has been submitted and is currently being reviewed by our team.
           </Text>
 
@@ -82,37 +82,37 @@ export const VerificationPendingScreen: React.FC<VerificationPendingScreenProps>
           </View>
 
           <View style={styles.estimateContainer}>
-            <MaterialIcons name="access-time" size={16} color={Colors.light.secondary} />
-            <Text style={[TeaKEStyles.caption, styles.estimateText]}>
-              Estimated review time: 20 minutes
+            <MaterialIcons name="access-time" size={16} color={Colors.light.textSecondary} />
+            <Text style={styles.estimateText}>
+              Estimated review time: 10 minutes 
             </Text>
           </View>
         </TeaKECard>
 
         {/* Info Card */}
         <TeaKECard style={styles.infoCard}>
-          <Text style={[TeaKEStyles.h4, styles.infoTitle]}>
+          <Text style={styles.infoTitle}>
             What happens next?
           </Text>
           
           <View style={styles.infoList}>
             <View style={styles.infoItem}>
               <MaterialIcons name="check-circle" size={16} color={Colors.light.success} />
-              <Text style={[TeaKEStyles.body, styles.infoText]}>
+              <Text style={styles.infoText}>
                 Our team will verify your identity
               </Text>
             </View>
             
             <View style={styles.infoItem}>
               <MaterialIcons name="notifications" size={16} color={Colors.light.success} />
-              <Text style={[TeaKEStyles.body, styles.infoText]}>
+              <Text style={styles.infoText}>
                 You&apos;ll receive a notification when approved
               </Text>
             </View>
             
             <View style={styles.infoItem}>
               <MaterialIcons name="chat" size={16} color={Colors.light.success} />
-              <Text style={[TeaKEStyles.body, styles.infoText]}>
+              <Text style={styles.infoText}>
                 Once verified, you can start posting and chatting
               </Text>
             </View>
@@ -155,10 +155,14 @@ const styles = StyleSheet.create({
   title: {
     textAlign: 'center',
     marginBottom: 8,
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: Colors.light.text,
   },
   subtitle: {
     textAlign: 'center',
-    color: Colors.light.secondary,
+    color: Colors.light.textSecondary,
+    fontSize: 16,
   },
   statusCard: {
     marginBottom: 24,
@@ -170,7 +174,9 @@ const styles = StyleSheet.create({
   },
   statusTitle: {
     marginLeft: 12,
-    color: Colors.light.primary,
+    fontSize: 18,
+    fontWeight: '600',
+    color: Colors.light.text,
   },
   statusDescription: {
     marginBottom: 24,
@@ -188,7 +194,7 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: Colors.light.muted,
+    backgroundColor: Colors.light.border,
     marginRight: 12,
   },
   completedDot: {
@@ -212,13 +218,17 @@ const styles = StyleSheet.create({
   },
   estimateText: {
     marginLeft: 8,
-    color: Colors.light.secondary,
+    color: Colors.light.textSecondary,
+    fontSize: 12,
   },
   infoCard: {
     marginBottom: 32,
   },
   infoTitle: {
     marginBottom: 16,
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.light.text,
   },
   infoList: {
     gap: 12,
@@ -230,6 +240,8 @@ const styles = StyleSheet.create({
   infoText: {
     marginLeft: 12,
     flex: 1,
+    fontSize: 14,
+    color: Colors.light.text,
     lineHeight: 20,
   },
   actions: {
@@ -240,7 +252,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   signOutText: {
-    color: Colors.light.secondary,
+    color: Colors.light.textSecondary,
     fontSize: 16,
   },
 });

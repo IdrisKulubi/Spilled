@@ -70,7 +70,7 @@ export const AddPostScreen: React.FC = () => {
   const pickImage = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [4, 3],
         quality: 0.8,
@@ -87,6 +87,7 @@ export const AddPostScreen: React.FC = () => {
   const takePhoto = async () => {
     try {
       const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [4, 3],
         quality: 0.8,
@@ -434,11 +435,11 @@ export const AddPostScreen: React.FC = () => {
         </TeaKECard>
 
         {/* Safety Notice */}
-        <TeaKECard style={[styles.safetyNotice, { marginBottom: 100 }]}>
+        <TeaKECard style={styles.safetyNotice}>
           <MaterialIcons name="security" size={24} color={Colors.light.primary} style={{ marginBottom: 8 }} />
           <Text style={[TeaKEStyles.body, { textAlign: 'center', fontSize: 14 }]}>
             <Text style={{ fontWeight: '600' }}>Your Safety Matters:</Text> By sharing your story, 
-            you're helping create a safer community for all women. Thank you for your courage.
+            you&apos;re helping create a safer community for all women. Thank you for your courage.
           </Text>
         </TeaKECard>
 

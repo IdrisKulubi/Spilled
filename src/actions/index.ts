@@ -39,3 +39,17 @@ export {
   checkCommentOwnership 
 } from './storyActions';
 export type { UpdateStoryData } from './storyActions';
+
+export {
+  fetchPendingVerifications,
+  approveUserVerification,
+  rejectUserVerification,
+  fetchAdminStats,
+  bulkApprovePendingVerifications,
+  subscribeToVerificationChanges
+} from './adminActions';
+export type {
+  PendingVerification,
+  AdminResponse,
+  AdminStats
+} from './adminActions';

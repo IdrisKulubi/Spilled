@@ -24,6 +24,9 @@ const ExpoSecureStoreAdapter = {
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || 'YOUR_SUPABASE_URL';
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'YOUR_SUPABASE_ANON_KEY';
 
+// Admin configuration
+export const ADMIN_EMAIL = process.env.EXPO_PUBLIC_ADMIN_EMAIL || 'kulubiidris@gmail.com';
+
 console.log('🔧 [Supabase] Initializing with URL:', supabaseUrl);
 console.log('🔧 [Supabase] App scheme:', process.env.EXPO_PUBLIC_SCHEME || 'teake');
 
@@ -35,8 +38,6 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     detectSessionInUrl: false,
     // Use SecureStore for session persistence
     storage: ExpoSecureStoreAdapter,
-    // Configure OAuth redirects
-    redirectTo: `${process.env.EXPO_PUBLIC_SCHEME || 'teake'}://`,
   },
 });
 
@@ -51,4 +52,10 @@ export const handleSupabaseError = (error: any): string => {
     return error.message;
   }
   return 'An unexpected error occurred';
+};
+
+// Helper function to check if user is admin
+export const isUserAdmin = (userEmail?: string): boolean => {
+  if (!userEmail) return false;
+  return userEmail.toLowerCase() === ADMIN_EMAIL.toLowerCase();
 };

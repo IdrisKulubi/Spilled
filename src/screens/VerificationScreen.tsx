@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   View, 
   Text, 
@@ -28,14 +28,14 @@ export const VerificationScreen: React.FC = () => {
 
   const { uploadVerificationImage, getVerificationStatus, user } = useAuth();
 
-  useEffect(() => {
-    loadVerificationStatus();
-  }, []);
-
-  const loadVerificationStatus = async () => {
+  const loadVerificationStatus = useCallback(async () => {
     const status = await getVerificationStatus();
     setVerificationStatus(status);
-  };
+  }, [getVerificationStatus]);
+
+  useEffect(() => {
+    loadVerificationStatus();
+  }, [loadVerificationStatus]);
 
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -46,7 +46,7 @@ export const VerificationScreen: React.FC = () => {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [4, 3],
       quality: 0.8,
@@ -66,6 +66,7 @@ export const VerificationScreen: React.FC = () => {
     }
 
     const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [4, 3],
       quality: 0.8,
@@ -89,7 +90,7 @@ export const VerificationScreen: React.FC = () => {
       if (result.success) {
         Alert.alert(
           'Upload Successful!',
-          'Your ID has been uploaded for verification. We\'ll review it within 24 hours.',
+          'Your ID has been uploaded for verification. We\'ll review it within 10 mins or less.',
           [{ text: 'OK', onPress: loadVerificationStatus }]
         );
         setSelectedImage(null);
@@ -97,6 +98,7 @@ export const VerificationScreen: React.FC = () => {
         Alert.alert('Upload Failed', result.error || 'Failed to upload image');
       }
     } catch (error) {
+      console.error('Error uploading verification image:', error);
       Alert.alert('Error', 'Failed to upload verification image');
     } finally {
       setUploading(false);
@@ -124,7 +126,7 @@ export const VerificationScreen: React.FC = () => {
             Verification Complete! 🎉
           </Text>
           <Text style={[TeaKEStyles.body, { textAlign: 'center', marginTop: 16 }]}>
-            You're now a verified member of TeaKE. You can post stories, comment, and message other users.
+            You&apos;re now a verified member of TeaKE. You can post stories, comment, and message other users.
           </Text>
         </View>
       </SafeAreaView>
@@ -166,8 +168,8 @@ export const VerificationScreen: React.FC = () => {
             Verification Pending
           </Text>
           <Text style={[TeaKEStyles.body, { textAlign: 'center', marginTop: 16 }]}>
-            We're reviewing your ID. This usually takes less than 24 hours. 
-            You'll be notified once it's approved.
+            We&apos;re reviewing your ID. This usually takes less than 24 hours. 
+            You&apos;ll be notified once it&apos;s approved.
           </Text>
         </View>
       </SafeAreaView>
@@ -189,10 +191,7 @@ export const VerificationScreen: React.FC = () => {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* DEBUG IDENTIFIER */}
-          <Text style={{ color: 'red', fontSize: 12, textAlign: 'center', marginBottom: 10 }}>
-            🔍 DEBUG: UPLOAD ID INTERFACE
-          </Text>
+         
           
           <Text style={TeaKEStyles.heading1}>Verify Your Identity</Text>
           <Text style={TeaKEStyles.body}>

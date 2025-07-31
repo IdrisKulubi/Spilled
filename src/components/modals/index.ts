@@ -6,3 +6,4 @@
 export { StoryActionsModal } from './StoryActionsModal';
 export { DeleteConfirmationModal } from './DeleteConfirmationModal';
 export { EditStoryModal } from './EditStoryModal';
+export { UserApprovalModal } from './UserApprovalModal';

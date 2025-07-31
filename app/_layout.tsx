@@ -57,6 +57,13 @@ function AppStack({ fontLoaded }: { fontLoaded: boolean }) {
           presentation: 'card',
         }}
       />
+      <Stack.Screen
+        name="admin"
+        options={{
+          headerShown: false, // AdminScreen has its own header
+          presentation: 'card',
+        }}
+      />
     </Stack>
   );
 }
