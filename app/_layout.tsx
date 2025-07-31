@@ -42,6 +42,14 @@ function AppStack({ fontLoaded }: { fontLoaded: boolean }) {
         }} 
       />
       <Stack.Screen name="+not-found" />
+      <Stack.Screen
+        name="profile"
+        options={{
+          title: 'Profile',
+          headerShown: true,
+          presentation: 'modal',
+        }}
+      />
     </Stack>
   );
 }

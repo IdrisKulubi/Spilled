@@ -10,3 +10,4 @@ export { ChatScreen } from './ChatScreen';
 export { SignUpScreen } from './SignUpScreen';
 export { SignInScreen } from './SignInScreen';
 export { VerificationScreen } from './VerificationScreen';
+export { ProfileScreen } from './ProfileScreen';

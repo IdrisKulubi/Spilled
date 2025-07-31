@@ -183,6 +183,7 @@ export const StoryCard: React.FC<StoryCardProps> = ({
           {/* Reactions */}
           {(['red_flag', 'good_vibes', 'unsure'] as ReactionType[]).map(reactionType => {
             const reactionData = getReactionButtonStyle(reactionType);
+            const count = reactionData.count;
             return (
               <TouchableOpacity
                 key={reactionType}
@@ -190,9 +191,16 @@ export const StoryCard: React.FC<StoryCardProps> = ({
                 onPress={() => handleReactionPress(reactionType)}
                 disabled={isReacting}
               >
-                <Text style={styles.reactionEmoji}>
-                  {getReactionIcon(reactionType)}
-                </Text>
+                <View style={styles.reactionButtonContent}>
+                  <Text style={styles.reactionEmoji}>
+                    {getReactionIcon(reactionType)}
+                  </Text>
+                  {count > 0 && (
+                    <Text style={styles.reactionCount}>
+                      {count}
+                    </Text>
+                  )}
+                </View>
               </TouchableOpacity>
             );
           })}
@@ -351,12 +359,25 @@ const styles = StyleSheet.create({
     padding: Spacing.xs,
     borderRadius: 20,
     backgroundColor: 'transparent',
+    minWidth: 50,
+    alignItems: 'center',
   },
   reactionButtonSelected: {
     backgroundColor: Colors.light.accent,
   },
+  reactionButtonContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   reactionEmoji: {
     fontSize: 24,
+  },
+  reactionCount: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: Colors.light.text,
+    marginTop: 2,
+    textAlign: 'center',
   },
   reactionCounts: {
     paddingHorizontal: Spacing.md,

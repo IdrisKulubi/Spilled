@@ -47,44 +47,35 @@ export default function SearchScreen() {
   }
 
   const handleSearch = async () => {
-    let searchParams: { name?: string; phone?: string; socials?: string } = {};
-
-    if (searchType === 'simple') {
-      if (!searchTerm.trim()) {
-        Alert.alert('Enter Search Term', 'Please enter a name, nickname, phone, or social handle');
-        return;
-      }
-      // For simple search, try the term in all fields
-      const term = searchTerm.trim();
-      if (term.includes('@') || term.includes('instagram') || term.includes('twitter') || term.includes('tiktok')) {
-        searchParams.socials = term;
-      } else if (/^[0-9+\-\s()]+$/.test(term)) {
-        searchParams.phone = term;
-      } else {
-        searchParams.name = term;
-      }
-    } else {
-      // Advanced search - use specific fields
-      if (!nameField.trim() && !phoneField.trim() && !socialsField.trim()) {
-        Alert.alert('Enter Search Criteria', 'Please fill in at least one search field');
-        return;
-      }
-      if (nameField.trim()) searchParams.name = nameField.trim();
-      if (phoneField.trim()) searchParams.phone = phoneField.trim();
-      if (socialsField.trim()) searchParams.socials = socialsField.trim();
+    if (!searchTerm.trim()) {
+      Alert.alert('Enter Search Term', 'Please enter a name, nickname, phone, or social handle');
+      return;
     }
 
     setIsSearching(true);
     setSearchResults([]);
     
     try {
-      const results = await searchGuys(searchParams);
+      // Use the improved search with general search term
+      const results = await searchGuys({
+        searchTerm: searchTerm.trim()
+      });
+      
       setSearchResults(results);
       
       if (results.length === 0) {
-        const searchedTerm = searchType === 'simple' ? searchTerm : 
-          [nameField, phoneField, socialsField].filter(f => f.trim()).join(', ');
-        Alert.alert('No Results', `No one has posted about "${searchedTerm}" yet.`);
+        Alert.alert(
+          'No Results', 
+          `No stories found about "${searchTerm.trim()}". This could mean:\n\n• No one has posted about this person yet\n• Try different spelling or nickname\n• Try searching with partial name`,
+          [
+            { text: 'Try Again', style: 'default' },
+            { 
+              text: 'Be the First to Share', 
+              onPress: () => router.push('/add-post'),
+              style: 'default'
+            }
+          ]
+        );
       }
     } catch (error) {
       Alert.alert('Search Error', 'Something went wrong. Please try again.');
@@ -184,9 +175,65 @@ export default function SearchScreen() {
         {searchResults.length > 0 && (
           <View style={styles.resultsContainer}>
             <Text style={[TeaKEStyles.heading2, { marginBottom: 16 }]}>
-              Search Results
+              Search Results ({searchResults.length})
             </Text>
-            {/* TODO: Render search results */}
+            {searchResults.map((guy, index) => (
+              <TeaKECard key={guy.id} style={styles.resultCard}>
+                <TouchableOpacity 
+                  onPress={() => handleGuySelect(guy)}
+                  style={styles.resultContent}
+                >
+                  <View style={styles.resultHeader}>
+                    <View style={styles.resultInfo}>
+                      <Text style={[TeaKEStyles.heading2, { fontSize: 16, marginBottom: 4 }]}>
+                        {guy.name || 'Unknown Name'}
+                      </Text>
+                      
+                      {/* Guy Details */}
+                      <View style={styles.guyDetails}>
+                        {guy.age && (
+                          <Text style={styles.detailText}>
+                            {guy.age} years old
+                          </Text>
+                        )}
+                        {guy.location && (
+                          <Text style={styles.detailText}>
+                            📍 {guy.location}
+                          </Text>
+                        )}
+                        {guy.phone && (
+                          <Text style={styles.detailText}>
+                            📱 ***{guy.phone.slice(-4)}
+                          </Text>
+                        )}
+                        {guy.socials && (
+                          <Text style={styles.detailText}>
+                            📱 {guy.socials}
+                          </Text>
+                        )}
+                      </View>
+
+                      {/* Story Count */}
+                      <View style={styles.storyCount}>
+                        <MaterialIcons name="chat-bubble-outline" size={16} color={Colors.light.primary} />
+                        <Text style={[TeaKEStyles.body, { fontSize: 13, marginLeft: 4, color: Colors.light.primary }]}>
+                          {guy.story_count} {guy.story_count === 1 ? 'story' : 'stories'} shared
+                        </Text>
+                      </View>
+
+                      {/* Match Source */}
+                      {guy.match_source === 'story_content' && (
+                        <Text style={styles.matchSource}>
+                          💬 Found in story content
+                        </Text>
+                      )}
+                    </View>
+                    
+                    <MaterialIcons name="chevron-right" size={24} color={Colors.light.textSecondary} />
+                  </View>
+                </TouchableOpacity>
+              </TeaKECard>
+            ))}
           </View>
         )}
 
@@ -305,29 +352,38 @@ const styles = StyleSheet.create({
   },
   resultCard: {
     marginBottom: 12,
-    paddingVertical: 16,
+  },
+  resultContent: {
+    padding: 16,
   },
   resultHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 8,
   },
   resultInfo: {
     flex: 1,
   },
-  resultDetail: {
+  guyDetails: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 6,
+    flexWrap: 'wrap',
+    marginBottom: 8,
+    gap: 12,
+  },
+  detailText: {
+    fontSize: 13,
+    color: Colors.light.textSecondary,
   },
   storyCount: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 8,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: Colors.light.accent,
+    marginTop: 4,
+  },
+  matchSource: {
+    fontSize: 12,
+    color: Colors.light.primary,
+    fontStyle: 'italic',
+    marginTop: 4,
   },
   noResultsCard: {
     alignItems: 'center',

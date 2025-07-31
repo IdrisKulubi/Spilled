@@ -18,6 +18,8 @@ export interface GuyProfile {
   age?: number;
   created_at: string;
   stories: Story[];
+  story_count?: number;
+  match_source?: string;
 }
 
 export interface Story {
@@ -45,6 +47,10 @@ export interface SearchParams {
   name?: string;
   phone?: string;
   socials?: string;
+  location?: string;
+  minAge?: number;
+  maxAge?: number;
+  searchTerm?: string; // For general search
 }
 
 export const fetchGuyProfile = async (searchParams: SearchParams): Promise<GuyProfile | null> => {
@@ -226,25 +232,43 @@ export const addComment = async (storyId: string, text: string, anonymous: boole
 // Search guys with multiple criteria (public function)
 export const searchGuys = async (searchParams: SearchParams): Promise<GuyProfile[]> => {
   try {
-    // Validation
-    const hasSearchCriteria = searchParams.name || searchParams.phone || searchParams.socials;
+    // Check if we have any search criteria
+    const hasSearchCriteria = searchParams.name || searchParams.phone || searchParams.socials || 
+                             searchParams.location || searchParams.searchTerm || 
+                             searchParams.minAge || searchParams.maxAge;
+    
     if (!hasSearchCriteria) {
       return [];
     }
 
-    // Format phone number if provided
-    let formattedPhone = searchParams.phone;
-    if (formattedPhone) {
-      formattedPhone = authUtils.formatPhoneNumber(formattedPhone);
-    }
+    let guys;
+    let error;
 
-    // Search using the custom function
-    const { data: guys, error } = await supabase
-      .rpc('search_guys', {
-        search_name: searchParams.name || null,
-        search_phone: formattedPhone || null,
-        search_socials: searchParams.socials || null,
-      });
+    // If we have a general search term, use the comprehensive search
+    if (searchParams.searchTerm && searchParams.searchTerm.trim()) {
+      const { data, error: searchError } = await supabase
+        .rpc('search_guys_and_stories', {
+          search_term: searchParams.searchTerm.trim(),
+        });
+      guys = data;
+      error = searchError;
+    } else {
+      // Use specific field search
+      const formattedPhone = searchParams.phone ? 
+        authUtils.formatPhoneNumber(searchParams.phone) : null;
+
+      const { data, error: searchError } = await supabase
+        .rpc('search_guys', {
+          search_name: searchParams.name || null,
+          search_phone: formattedPhone || null,
+          search_socials: searchParams.socials || null,
+          search_location: searchParams.location || null,
+          min_age: searchParams.minAge || null,
+          max_age: searchParams.maxAge || null,
+        });
+      guys = data;
+      error = searchError;
+    }
 
     if (error) {
       console.error('Error searching guys:', error);
@@ -257,13 +281,16 @@ export const searchGuys = async (searchParams: SearchParams): Promise<GuyProfile
 
     // Return basic guy info with story count
     return guys.map(guy => ({
-      id: guy.id,
-      name: guy.name,
-      phone: guy.phone,
-      socials: guy.socials,
-      created_at: guy.created_at,
+      id: guy.guy_id || guy.id,
+      name: guy.guy_name || guy.name,
+      phone: guy.guy_phone || guy.phone,
+      socials: guy.guy_socials || guy.socials,
+      location: guy.guy_location || guy.location,
+      age: guy.guy_age || guy.age,
+      created_at: guy.latest_story_date || guy.created_at || new Date().toISOString(),
       stories: [], // Don't load full stories for search results
-      story_count: guy.story_count,
+      story_count: guy.story_count || 0,
+      match_source: guy.match_source || 'direct',
     }));
   } catch (error) {
     console.error('Error searching guys:', error);

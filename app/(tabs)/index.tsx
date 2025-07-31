@@ -17,6 +17,7 @@ import { TeaKEStyles } from '@/src/constants/Styles';
 import { TeaKEButton, TeaKECard } from '@/src/components/ui';
 import { Colors } from '@/constants/Colors';
 import { useRouter } from 'expo-router';
+import { ProfileDropdown } from '@/src/components/ProfileDropdown';
 
 export default function HomeScreen() {
   const { user } = useAuth();
@@ -41,12 +42,10 @@ export default function HomeScreen() {
 
 // Main dashboard for verified users
 const AuthenticatedHome: React.FC<{ user: any }> = ({ user }) => {
-  const { signOut } = useAuth();
+
   const router = useRouter();
 
-  const handleSignOut = async () => {
-    await signOut();
-  };
+
 
   return (
     <SafeAreaView style={TeaKEStyles.safeContainer}>
@@ -54,17 +53,12 @@ const AuthenticatedHome: React.FC<{ user: any }> = ({ user }) => {
         {/* Header */}
         <View style={styles.headerContainer}>
           <View>
-            <Text style={styles.welcomeText}>Welcome back!</Text>
+            <Text style={styles.welcomeText}>Welcome back</Text>
             <Text style={[TeaKEStyles.body, { opacity: 0.8 }]}>
               {user.nickname || user.email}
             </Text>
           </View>
-          <TouchableOpacity 
-            onPress={handleSignOut}
-            style={styles.signOutButton}
-          >
-            <Text style={styles.signOutText}>Sign Out</Text>
-          </TouchableOpacity>
+          <ProfileDropdown user={user} />
         </View>
 
         {/* Quick Actions */}
@@ -145,7 +139,7 @@ const styles = StyleSheet.create({
   headerContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     paddingTop: 16,
     marginBottom: 32,
   },
@@ -155,18 +149,8 @@ const styles = StyleSheet.create({
     color: Colors.light.text,
     marginBottom: 4,
   },
-  signOutButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    backgroundColor: Colors.light.accent,
-  },
-  signOutText: {
-    fontSize: 14,
-    color: Colors.light.primary,
-    fontWeight: '600',
-  },
-  quickActionsContainer: {
+
+    quickActionsContainer: {
     marginBottom: 32,
   },
   actionCard: {
