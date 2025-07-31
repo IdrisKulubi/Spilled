@@ -23,7 +23,7 @@ import { TeaKEButton, TeaKECard } from '@/src/components/ui';
 import { 
   approveUserVerification, 
   rejectUserVerification,
-  fixImageUrl,
+  getSignedImageUrl,
   PendingVerification 
 } from '@/src/actions/adminActions';
 
@@ -45,18 +45,43 @@ export const UserApprovalModal: React.FC<UserApprovalModalProps> = ({
   const [processing, setProcessing] = useState(false);
   const [approvalDecision, setApprovalDecision] = useState<boolean | null>(null);
   const [imageUrl, setImageUrl] = useState<string>('');
+  const [imageLoading, setImageLoading] = useState(false);
+  const [imageError, setImageError] = useState<string | null>(null);
 
-  // Validate and set image URL when user changes - MUST be before any conditional returns
+  // Generate signed URL for private bucket access when user changes
   React.useEffect(() => {
-    if (user?.id_image_url) {
-      const fixedUrl = fixImageUrl(user.id_image_url);
-      console.log('[UserApprovalModal] Original URL:', user.id_image_url);
-      console.log('[UserApprovalModal] Fixed URL:', fixedUrl);
-      setImageUrl(fixedUrl);
-    } else {
-      console.log('[UserApprovalModal] No image URL found for user:', user?.user_id);
-      setImageUrl('');
-    }
+    const loadSignedImageUrl = async () => {
+      if (user?.id_image_url) {
+        setImageLoading(true);
+        setImageError(null);
+        console.log('[UserApprovalModal] Original URL:', user.id_image_url);
+        
+        try {
+          const signedUrl = await getSignedImageUrl(user.id_image_url);
+          if (signedUrl) {
+            console.log('[UserApprovalModal] Generated signed URL successfully');
+            setImageUrl(signedUrl);
+          } else {
+            console.log('[UserApprovalModal] Failed to generate signed URL');
+            setImageUrl('');
+            setImageError('Could not generate signed URL for image');
+          }
+        } catch (error) {
+          console.error('[UserApprovalModal] Error generating signed URL:', error);
+          setImageUrl('');
+          setImageError('Error accessing image from storage');
+        } finally {
+          setImageLoading(false);
+        }
+      } else {
+        console.log('[UserApprovalModal] No image URL found for user:', user?.user_id);
+        setImageUrl('');
+        setImageError(null);
+        setImageLoading(false);
+      }
+    };
+
+    loadSignedImageUrl();
   }, [user?.id_image_url]);
 
   if (!user) return null;
@@ -110,36 +135,42 @@ export const UserApprovalModal: React.FC<UserApprovalModalProps> = ({
           text: 'Reject',
           style: 'destructive',
           onPress: async () => {
-            setProcessing(true);
-            try {
-              const result = await rejectUserVerification(user.user_id, 'ID verification failed');
-              
-              if (result.success) {
-                Alert.alert(
-                  'User Rejected',
-                  `${user.nickname || user.email}'s verification has been rejected.`,
-                  [
-                    {
-                      text: 'OK',
-                      onPress: () => {
-                        onApprovalComplete();
-                      }
-                    }
-                  ]
-                );
-              } else {
-                Alert.alert('Rejection Failed', result.error || 'Could not reject user');
-              }
-            } catch (error) {
-              console.error('[UserApprovalModal] Error rejecting user:', error);
-              Alert.alert('Error', 'An unexpected error occurred');
-            } finally {
-              setProcessing(false);
-            }
+            await handleRejectWithReason('ID verification failed');
           }
         }
       ]
     );
+  };
+
+  const handleRejectWithReason = async (reason: string) => {
+    if (!user || processing) return;
+
+    setProcessing(true);
+    try {
+      const result = await rejectUserVerification(user.user_id, reason);
+      
+      if (result.success) {
+        Alert.alert(
+          'User Rejected',
+          `${user.nickname || user.email}'s verification has been rejected.\n\nReason: ${reason}`,
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                onApprovalComplete();
+              }
+            }
+          ]
+        );
+      } else {
+        Alert.alert('Rejection Failed', result.error || 'Could not reject user');
+      }
+    } catch (error) {
+      console.error('[UserApprovalModal] Error rejecting user:', error);
+      Alert.alert('Error', 'An unexpected error occurred');
+    } finally {
+      setProcessing(false);
+    }
   };
 
   const handleApprovalToggle = (value: boolean) => {
@@ -253,16 +284,42 @@ export const UserApprovalModal: React.FC<UserApprovalModalProps> = ({
             <Text style={styles.sectionTitle}>🆔 ID Image</Text>
             
             <View style={styles.imageContainer}>
-              {imageUrl ? (
+              {imageLoading ? (
+                <View style={styles.imageLoading}>
+                  <ActivityIndicator size="large" color={Colors.light.primary} />
+                  <Text style={styles.loadingText}>Loading image...</Text>
+                </View>
+              ) : imageUrl && !imageError ? (
                 <Image
                   source={{ uri: imageUrl }}
                   style={styles.idImage}
                   resizeMode="contain"
+                  onError={(error) => {
+                    console.error('[UserApprovalModal] Image load error:', error);
+                    
+                    // Check if it's an empty file error
+                    const nativeEvent = error?.nativeEvent;
+                    if (nativeEvent?.httpResponseHeaders?.['Content-Length'] === '0') {
+                      setImageError('Image file is empty (0 bytes). The upload may have failed.');
+                    } else if (nativeEvent?.error?.includes('download error')) {
+                      setImageError('Image download failed. The file may be corrupted or inaccessible.');
+                    } else {
+                      setImageError('Failed to load image. Please check if the file exists and is valid.');
+                    }
+                  }}
                 />
               ) : (
                 <View style={styles.imageError}>
                   <MaterialIcons name="image-not-supported" size={48} color={Colors.light.textSecondary} />
-                  <Text style={styles.errorText}>No image URL provided</Text>
+                  <Text style={styles.errorText}>
+                    {imageError || 
+                     (user?.id_image_url ? 'Failed to load image from private storage' : 'No image URL provided')}
+                  </Text>
+                  {imageError && imageError.includes('empty') && (
+                    <Text style={styles.errorHint}>
+                      💡 The user may need to re-upload their ID image
+                    </Text>
+                  )}
                 </View>
               )}
             </View>
@@ -313,6 +370,22 @@ export const UserApprovalModal: React.FC<UserApprovalModalProps> = ({
                 disabled={processing}
                 variant={approvalDecision ? 'primary' : 'danger'}
                 style={[styles.confirmButton, { backgroundColor: getDecisionColor() }]}
+              />
+            )}
+            
+            {imageError && imageError.includes('empty') && (
+              <TeaKEButton
+                title="Reject - Request Re-upload"
+                onPress={() => {
+                  setApprovalDecision(false);
+                  // Auto-confirm rejection for empty files
+                  setTimeout(() => {
+                    handleRejectWithReason('Image file is empty (0 bytes). Please re-upload your ID image.');
+                  }, 100);
+                }}
+                disabled={processing}
+                variant="secondary"
+                style={[styles.confirmButton, { backgroundColor: '#FFA500', marginTop: Spacing.sm }]}
               />
             )}
           </TeaKECard>
@@ -413,6 +486,24 @@ const styles = StyleSheet.create({
     padding: Spacing.lg,
   },
   errorText: {
+    fontSize: 14,
+    color: Colors.light.textSecondary,
+    marginTop: Spacing.sm,
+    textAlign: 'center',
+  },
+  errorHint: {
+    fontSize: 12,
+    color: Colors.light.primary,
+    marginTop: Spacing.xs,
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
+  imageLoading: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Spacing.lg,
+  },
+  loadingText: {
     fontSize: 14,
     color: Colors.light.textSecondary,
     marginTop: Spacing.sm,

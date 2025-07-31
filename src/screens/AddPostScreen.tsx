@@ -1,76 +1,79 @@
-import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  SafeAreaView, 
-  ScrollView, 
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  SafeAreaView,
+  ScrollView,
   TextInput,
   TouchableOpacity,
   Switch,
   Alert,
   StyleSheet,
-  ActivityIndicator
-} from 'react-native';
-import { useAuth } from '../contexts/AuthContext';
-import { TeaKEStyles, Spacing } from '../constants/Styles';
-import { TeaKEButton, TeaKECard, StatusTag } from '../components/ui';
-import { Colors } from '../../constants/Colors';
-import { addPost, CreatePostData } from '../actions/addPost';
-import { MaterialIcons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
+  ActivityIndicator,
+} from "react-native";
+import { useAuth } from "../contexts/AuthContext";
+import { TeaKEStyles, Spacing } from "../constants/Styles";
+import { TeaKEButton, TeaKECard, StatusTag } from "../components/ui";
+import { Colors } from "../../constants/Colors";
+import { addPost, CreatePostData, uploadStoryImage } from "../actions/addPost";
+import { MaterialIcons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 
-type TagType = 'red_flag' | 'good_vibes' | 'unsure';
+type TagType = "red_flag" | "good_vibes" | "unsure";
 
 export const AddPostScreen: React.FC = () => {
   const { user } = useAuth();
-  
+
   // Form state
-  const [guyName, setGuyName] = useState('');
-  const [guyPhone, setGuyPhone] = useState('');
-  const [guySocials, setGuySocials] = useState('');
-  const [guyLocation, setGuyLocation] = useState('');
-  const [guyAge, setGuyAge] = useState('');
-  const [storyText, setStoryText] = useState('');
+  const [guyName, setGuyName] = useState("");
+  const [guyPhone, setGuyPhone] = useState("");
+  const [guySocials, setGuySocials] = useState("");
+  const [guyLocation, setGuyLocation] = useState("");
+  const [guyAge, setGuyAge] = useState("");
+  const [storyText, setStoryText] = useState("");
   const [selectedTags, setSelectedTags] = useState<TagType[]>([]);
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [anonymous, setAnonymous] = useState(true);
-  const [nickname, setNickname] = useState('');
+  const [nickname, setNickname] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Available tags
-  const availableTags: { type: TagType; label: string; emoji: string; description: string }[] = [
-    { 
-      type: 'red_flag', 
-      label: 'Red Flag', 
-      emoji: '🚩', 
-      description: 'Warning signs or concerning behavior'
+  const availableTags: {
+    type: TagType;
+    label: string;
+    emoji: string;
+    description: string;
+  }[] = [
+    {
+      type: "red_flag",
+      label: "Red Flag",
+      emoji: "🚩",
+      description: "Warning signs or concerning behavior",
     },
-    { 
-      type: 'good_vibes', 
-      label: 'Good Vibes', 
-      emoji: '✅', 
-      description: 'Positive experience or green flags'
+    {
+      type: "good_vibes",
+      label: "Good Vibes",
+      emoji: "✅",
+      description: "Positive experience or green flags",
     },
-    { 
-      type: 'unsure', 
-      label: 'Unsure', 
-      emoji: '❓', 
-      description: 'Mixed feelings or unclear situation'
-    }
+    {
+      type: "unsure",
+      label: "Unsure",
+      emoji: "❓",
+      description: "Mixed feelings or unclear situation",
+    },
   ];
 
   const toggleTag = (tag: TagType) => {
-    setSelectedTags(prev => 
-      prev.includes(tag) 
-        ? prev.filter(t => t !== tag)
-        : [...prev, tag]
+    setSelectedTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
     );
   };
 
   const pickImage = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
+        mediaTypes: ["images"],
         allowsEditing: true,
         aspect: [4, 3],
         quality: 0.8,
@@ -80,14 +83,15 @@ export const AddPostScreen: React.FC = () => {
         setImageUri(result.assets[0].uri);
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to pick image. Please try again.');
+      console.error(error);
+      Alert.alert("Error", "Failed to pick image. Please try again.");
     }
   };
 
   const takePhoto = async () => {
     try {
       const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ['images'],
+        mediaTypes: ["images"],
         allowsEditing: true,
         aspect: [4, 3],
         quality: 0.8,
@@ -97,49 +101,58 @@ export const AddPostScreen: React.FC = () => {
         setImageUri(result.assets[0].uri);
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to take photo. Please try again.');
+      console.error(error);
+      Alert.alert("Error", "Failed to take photo. Please try again.");
     }
   };
 
   const showImageOptions = () => {
-    Alert.alert(
-      'Add Photo',
-      'Choose how to add a photo to your story',
-      [
-        { text: 'Camera', onPress: takePhoto },
-        { text: 'Photo Library', onPress: pickImage },
-        { text: 'Cancel', style: 'cancel' }
-      ]
-    );
+    Alert.alert("Add Photo", "Choose how to add a photo to your story", [
+      { text: "Camera", onPress: takePhoto },
+      { text: "Photo Library", onPress: pickImage },
+      { text: "Cancel", style: "cancel" },
+    ]);
   };
 
   const validateForm = (): boolean => {
     if (!storyText.trim()) {
-      Alert.alert('Story Required', 'Please share your story or experience.');
+      Alert.alert("Story Required", "Please share your story or experience.");
       return false;
     }
 
     if (storyText.trim().length < 10) {
-      Alert.alert('Story Too Short', 'Please provide more details in your story (at least 10 characters).');
+      Alert.alert(
+        "Story Too Short",
+        "Please provide more details in your story (at least 10 characters)."
+      );
       return false;
     }
 
     if (!guyName.trim() && !guyPhone.trim() && !guySocials.trim()) {
       Alert.alert(
-        'Guy Information Required', 
-        'Please provide at least one way to identify the person (name, phone, or social handle).'
+        "Guy Information Required",
+        "Please provide at least one way to identify the person (name, phone, or social handle)."
       );
       return false;
     }
 
     // Validate age if provided
-    if (guyAge.trim() && (isNaN(Number(guyAge)) || Number(guyAge) < 18 || Number(guyAge) > 100)) {
-      Alert.alert('Invalid Age', 'Please enter a valid age between 18 and 100.');
+    if (
+      guyAge.trim() &&
+      (isNaN(Number(guyAge)) || Number(guyAge) < 18 || Number(guyAge) > 100)
+    ) {
+      Alert.alert(
+        "Invalid Age",
+        "Please enter a valid age between 18 and 100."
+      );
       return false;
     }
 
     if (!anonymous && !nickname.trim()) {
-      Alert.alert('Nickname Required', 'Please provide a nickname or switch to anonymous posting.');
+      Alert.alert(
+        "Nickname Required",
+        "Please provide a nickname or switch to anonymous posting."
+      );
       return false;
     }
 
@@ -149,13 +162,36 @@ export const AddPostScreen: React.FC = () => {
   const handlePost = async () => {
     if (!validateForm()) return;
     if (!user) {
-      Alert.alert('Error', 'You must be logged in to post.');
+      Alert.alert("Error", "You must be logged in to post.");
       return;
     }
 
     setIsSubmitting(true);
 
     try {
+      let uploadedImageUrl: string | undefined = undefined;
+
+      // Upload image first if one is selected
+      if (imageUri) {
+        console.log("[AddPost] Uploading image...");
+        // Create a temporary story ID for the upload
+        const tempStoryId = `temp-${Date.now()}`;
+        const uploadResult = await uploadStoryImage(imageUri, tempStoryId);
+
+        // Convert null to undefined for type compatibility
+        uploadedImageUrl = uploadResult || undefined;
+
+        if (!uploadedImageUrl) {
+          Alert.alert(
+            "Upload Error",
+            "Failed to upload image. Please try again or post without the image."
+          );
+          setIsSubmitting(false);
+          return;
+        }
+        console.log("[AddPost] Image uploaded successfully:", uploadedImageUrl);
+      }
+
       const postData: CreatePostData = {
         guyName: guyName.trim() || undefined,
         guyPhone: guyPhone.trim() || undefined,
@@ -164,42 +200,49 @@ export const AddPostScreen: React.FC = () => {
         guyAge: guyAge.trim() ? Number(guyAge.trim()) : undefined,
         storyText: storyText.trim(),
         tags: selectedTags,
-        imageUrl: imageUri || undefined,
+        imageUrl: uploadedImageUrl,
         anonymous,
-        nickname: anonymous ? undefined : (nickname.trim() || undefined)
+        nickname: anonymous ? undefined : nickname.trim() || undefined,
       };
 
+      console.log("[AddPost] Creating post with data:", {
+        ...postData,
+        imageUrl: uploadedImageUrl ? "uploaded" : "none",
+      });
       const response = await addPost(postData);
 
       if (response.success) {
         Alert.alert(
-          'Story Shared!',
-          'Thank you for helping other women stay safe. Your story has been posted.',
+          "Story Shared!",
+          "Thank you for helping other women stay safe. Your story has been posted.",
           [
             {
-              text: 'OK',
+              text: "OK",
               onPress: () => {
                 // Reset form
-                setGuyName('');
-                setGuyPhone('');
-                setGuySocials('');
-                setGuyLocation('');
-                setGuyAge('');
-                setStoryText('');
+                setGuyName("");
+                setGuyPhone("");
+                setGuySocials("");
+                setGuyLocation("");
+                setGuyAge("");
+                setStoryText("");
                 setSelectedTags([]);
                 setImageUri(null);
                 setAnonymous(true);
-                setNickname('');
-              }
-            }
+                setNickname("");
+              },
+            },
           ]
         );
       } else {
-        Alert.alert('Error', response.error || 'Failed to post story. Please try again.');
+        Alert.alert(
+          "Error",
+          response.error || "Failed to post story. Please try again."
+        );
       }
     } catch (error) {
-      console.error('Post creation error:', error);
-      Alert.alert('Error', 'Something went wrong. Please try again.');
+      console.error("Post creation error:", error);
+      Alert.alert("Error", "Something went wrong. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -207,8 +250,8 @@ export const AddPostScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={TeaKEStyles.safeContainer}>
-      <ScrollView 
-        style={TeaKEStyles.container} 
+      <ScrollView
+        style={TeaKEStyles.container}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
@@ -216,13 +259,16 @@ export const AddPostScreen: React.FC = () => {
         <View style={styles.header}>
           <Text style={TeaKEStyles.heading1}>Share Your Story</Text>
           <Text style={[TeaKEStyles.body, { opacity: 0.8 }]}>
-            Help other women by sharing your experience. All information is kept secure.
+            Help other women by sharing your experience. All information is kept
+            secure.
           </Text>
         </View>
 
         {/* Guy Information Section */}
         <TeaKECard style={styles.section}>
-          <Text style={[TeaKEStyles.heading2, { fontSize: 18, marginBottom: 12 }]}>
+          <Text
+            style={[TeaKEStyles.heading2, { fontSize: 18, marginBottom: 12 }]}
+          >
             About Him
           </Text>
           <Text style={[TeaKEStyles.caption, { marginBottom: 16 }]}>
@@ -288,11 +334,14 @@ export const AddPostScreen: React.FC = () => {
 
         {/* Story Section */}
         <TeaKECard style={styles.section}>
-          <Text style={[TeaKEStyles.heading2, { fontSize: 18, marginBottom: 12 }]}>
+          <Text
+            style={[TeaKEStyles.heading2, { fontSize: 18, marginBottom: 12 }]}
+          >
             Your Story *
           </Text>
           <Text style={[TeaKEStyles.caption, { marginBottom: 16 }]}>
-            Share your experience - what happened, how you felt, what others should know
+            Share your experience - what happened, how you felt, what others
+            should know
           </Text>
 
           <TextInput
@@ -306,17 +355,28 @@ export const AddPostScreen: React.FC = () => {
           />
 
           <View style={styles.characterCount}>
-            <Text style={[TeaKEStyles.caption, { 
-              color: storyText.length < 10 ? Colors.light.redFlag : Colors.light.textSecondary 
-            }]}>
-              {storyText.length} characters {storyText.length < 10 ? '(minimum 10)' : ''}
+            <Text
+              style={[
+                TeaKEStyles.caption,
+                {
+                  color:
+                    storyText.length < 10
+                      ? Colors.light.redFlag
+                      : Colors.light.textSecondary,
+                },
+              ]}
+            >
+              {storyText.length} characters{" "}
+              {storyText.length < 10 ? "(minimum 10)" : ""}
             </Text>
           </View>
         </TeaKECard>
 
         {/* Tags Section */}
         <TeaKECard style={styles.section}>
-          <Text style={[TeaKEStyles.heading2, { fontSize: 18, marginBottom: 12 }]}>
+          <Text
+            style={[TeaKEStyles.heading2, { fontSize: 18, marginBottom: 12 }]}
+          >
             How would you tag this?
           </Text>
           <Text style={[TeaKEStyles.caption, { marginBottom: 16 }]}>
@@ -329,26 +389,37 @@ export const AddPostScreen: React.FC = () => {
                 key={tag.type}
                 style={[
                   styles.tagOption,
-                  selectedTags.includes(tag.type) && styles.tagOptionSelected
+                  selectedTags.includes(tag.type) && styles.tagOptionSelected,
                 ]}
                 onPress={() => toggleTag(tag.type)}
               >
                 <View style={styles.tagHeader}>
                   <Text style={styles.tagEmoji}>{tag.emoji}</Text>
-                  <Text style={[
-                    styles.tagLabel,
-                    selectedTags.includes(tag.type) && styles.tagLabelSelected
-                  ]}>
+                  <Text
+                    style={[
+                      styles.tagLabel,
+                      selectedTags.includes(tag.type) &&
+                        styles.tagLabelSelected,
+                    ]}
+                  >
                     {tag.label}
                   </Text>
                   {selectedTags.includes(tag.type) && (
-                    <MaterialIcons name="check-circle" size={20} color={Colors.light.primary} />
+                    <MaterialIcons
+                      name="check-circle"
+                      size={20}
+                      color={Colors.light.primary}
+                    />
                   )}
                 </View>
-                <Text style={[
-                  TeaKEStyles.caption,
-                  selectedTags.includes(tag.type) && { color: Colors.light.primary }
-                ]}>
+                <Text
+                  style={[
+                    TeaKEStyles.caption,
+                    selectedTags.includes(tag.type) && {
+                      color: Colors.light.primary,
+                    },
+                  ]}
+                >
                   {tag.description}
                 </Text>
               </TouchableOpacity>
@@ -357,10 +428,16 @@ export const AddPostScreen: React.FC = () => {
 
           {selectedTags.length > 0 && (
             <View style={styles.selectedTags}>
-              <Text style={[TeaKEStyles.caption, { marginBottom: 8 }]}>Selected tags:</Text>
+              <Text style={[TeaKEStyles.caption, { marginBottom: 8 }]}>
+                Selected tags:
+              </Text>
               <View style={styles.tagsList}>
-                {selectedTags.map(tag => (
-                  <StatusTag key={tag} type={tag} style={{ marginRight: 8, marginBottom: 4 }} />
+                {selectedTags.map((tag) => (
+                  <StatusTag
+                    key={tag}
+                    type={tag}
+                    style={{ marginRight: 8, marginBottom: 4 }}
+                  />
                 ))}
               </View>
             </View>
@@ -369,7 +446,9 @@ export const AddPostScreen: React.FC = () => {
 
         {/* Photo Section */}
         <TeaKECard style={styles.section}>
-          <Text style={[TeaKEStyles.heading2, { fontSize: 18, marginBottom: 12 }]}>
+          <Text
+            style={[TeaKEStyles.heading2, { fontSize: 18, marginBottom: 12 }]}
+          >
             Add Photo (Optional)
           </Text>
           <Text style={[TeaKEStyles.caption, { marginBottom: 16 }]}>
@@ -378,19 +457,34 @@ export const AddPostScreen: React.FC = () => {
 
           {imageUri ? (
             <View style={styles.imagePreview}>
-              <Text style={[TeaKEStyles.body, { marginBottom: 8 }]}>✓ Photo selected</Text>
+              <Text style={[TeaKEStyles.body, { marginBottom: 8 }]}>
+                ✓ Photo selected
+              </Text>
               <View style={styles.imageActions}>
-                <TouchableOpacity onPress={showImageOptions} style={styles.changeImageButton}>
+                <TouchableOpacity
+                  onPress={showImageOptions}
+                  style={styles.changeImageButton}
+                >
                   <Text style={styles.changeImageText}>Change Photo</Text>
                 </TouchableOpacity>
-                <TouchableOpacity onPress={() => setImageUri(null)} style={styles.removeImageButton}>
+                <TouchableOpacity
+                  onPress={() => setImageUri(null)}
+                  style={styles.removeImageButton}
+                >
                   <Text style={styles.removeImageText}>Remove</Text>
                 </TouchableOpacity>
               </View>
             </View>
           ) : (
-            <TouchableOpacity style={styles.addPhotoButton} onPress={showImageOptions}>
-              <MaterialIcons name="add-photo-alternate" size={32} color={Colors.light.primary} />
+            <TouchableOpacity
+              style={styles.addPhotoButton}
+              onPress={showImageOptions}
+            >
+              <MaterialIcons
+                name="add-photo-alternate"
+                size={32}
+                color={Colors.light.primary}
+              />
               <Text style={styles.addPhotoText}>Add Photo</Text>
             </TouchableOpacity>
           )}
@@ -398,7 +492,9 @@ export const AddPostScreen: React.FC = () => {
 
         {/* Privacy Section */}
         <TeaKECard style={styles.section}>
-          <Text style={[TeaKEStyles.heading2, { fontSize: 18, marginBottom: 12 }]}>
+          <Text
+            style={[TeaKEStyles.heading2, { fontSize: 18, marginBottom: 12 }]}
+          >
             Privacy Settings
           </Text>
 
@@ -412,8 +508,13 @@ export const AddPostScreen: React.FC = () => {
             <Switch
               value={anonymous}
               onValueChange={setAnonymous}
-              trackColor={{ false: Colors.light.border, true: Colors.light.accent }}
-              thumbColor={anonymous ? Colors.light.primary : Colors.light.textSecondary}
+              trackColor={{
+                false: Colors.light.border,
+                true: Colors.light.accent,
+              }}
+              thumbColor={
+                anonymous ? Colors.light.primary : Colors.light.textSecondary
+              }
             />
           </View>
 
@@ -436,26 +537,40 @@ export const AddPostScreen: React.FC = () => {
 
         {/* Safety Notice */}
         <TeaKECard style={styles.safetyNotice}>
-          <MaterialIcons name="security" size={24} color={Colors.light.primary} style={{ marginBottom: 8 }} />
-          <Text style={[TeaKEStyles.body, { textAlign: 'center', fontSize: 14 }]}>
-            <Text style={{ fontWeight: '600' }}>Your Safety Matters:</Text> By sharing your story, 
-            you&apos;re helping create a safer community for all women. Thank you for your courage.
+          <MaterialIcons
+            name="security"
+            size={24}
+            color={Colors.light.primary}
+            style={{ marginBottom: 8 }}
+          />
+          <Text
+            style={[TeaKEStyles.body, { textAlign: "center", fontSize: 14 }]}
+          >
+            <Text style={{ fontWeight: "600" }}>Your Safety Matters:</Text> By
+            sharing your story, you&apos;re helping create a safer community for
+            all women. Thank you for your courage.
           </Text>
         </TeaKECard>
 
         {/* Submit Button */}
         <View style={styles.submitContainer}>
           <TeaKEButton
-            title={isSubmitting ? "Posting..." : anonymous ? "Post Anonymously" : `Post as ${nickname || 'Nickname'}`}
+            title={
+              isSubmitting
+                ? "Posting..."
+                : anonymous
+                ? "Post Anonymously"
+                : `Post as ${nickname || "Nickname"}`
+            }
             onPress={handlePost}
             disabled={isSubmitting || !storyText.trim()}
             style={styles.submitButton}
           />
           {isSubmitting && (
-            <ActivityIndicator 
-              size="small" 
-              color={Colors.light.primary} 
-              style={{ marginTop: 12 }} 
+            <ActivityIndicator
+              size="small"
+              color={Colors.light.primary}
+              style={{ marginTop: 12 }}
             />
           )}
         </View>
@@ -477,16 +592,16 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     color: Colors.light.text,
     marginBottom: 6,
   },
   storyInput: {
     minHeight: 120,
-    textAlignVertical: 'top',
+    textAlignVertical: "top",
   },
   characterCount: {
-    alignItems: 'flex-end',
+    alignItems: "flex-end",
     marginTop: 4,
   },
   tagsContainer: {
@@ -504,8 +619,8 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.accent,
   },
   tagHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 6,
   },
   tagEmoji: {
@@ -514,7 +629,7 @@ const styles = StyleSheet.create({
   },
   tagLabel: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     color: Colors.light.text,
     flex: 1,
   },
@@ -528,33 +643,33 @@ const styles = StyleSheet.create({
     borderTopColor: Colors.light.border,
   },
   tagsList: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
   },
   addPhotoButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     padding: Spacing.xl,
     borderRadius: 12,
     borderWidth: 2,
-    borderStyle: 'dashed',
+    borderStyle: "dashed",
     borderColor: Colors.light.primary,
     backgroundColor: Colors.light.accent,
   },
   addPhotoText: {
     marginTop: 8,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     color: Colors.light.primary,
   },
   imagePreview: {
-    alignItems: 'center',
+    alignItems: "center",
     padding: Spacing.md,
     backgroundColor: Colors.light.accent,
     borderRadius: 12,
   },
   imageActions: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: Spacing.md,
   },
   changeImageButton: {
@@ -565,7 +680,7 @@ const styles = StyleSheet.create({
   },
   changeImageText: {
     color: Colors.light.textOnPrimary,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   removeImageButton: {
     paddingHorizontal: 16,
@@ -575,12 +690,12 @@ const styles = StyleSheet.create({
   },
   removeImageText: {
     color: Colors.light.textOnPrimary,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   privacyOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: Spacing.md,
   },
   privacyOptionLeft: {
@@ -588,20 +703,20 @@ const styles = StyleSheet.create({
     marginRight: Spacing.md,
   },
   safetyNotice: {
-    alignItems: 'center',
+    alignItems: "center",
     backgroundColor: Colors.light.accent,
     borderColor: Colors.light.primary,
     borderWidth: 1,
     paddingVertical: Spacing.lg,
   },
   submitContainer: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 34,
     left: 16,
     right: 16,
-    alignItems: 'center',
+    alignItems: "center",
   },
   submitButton: {
-    width: '100%',
+    width: "100%",
   },
 });

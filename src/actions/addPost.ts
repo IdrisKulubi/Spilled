@@ -6,6 +6,7 @@
 import { supabase, handleSupabaseError } from '../config/supabase';
 import { authUtils } from '../utils/auth';
 import { Database } from '../types/database';
+import * as FileSystem from 'expo-file-system';
 
 type TagType = Database['public']['Enums']['tag_type'];
 
@@ -160,33 +161,65 @@ export const addPost = async (postData: CreatePostData): Promise<PostResponse> =
 // Helper function to upload image (if needed)
 export const uploadStoryImage = async (uri: string, storyId: string): Promise<string | null> => {
   try {
-    // Convert image to blob for upload
-    const response = await fetch(uri);
-    const blob = await response.blob();
+    console.log('[StoryUpload] Starting image upload for story:', storyId);
+    console.log('[StoryUpload] Image URI:', uri);
+    
+    // Use expo-file-system for reliable file reading
+    let fileData: Uint8Array;
+    
+    try {
+      // Read file as base64
+      const base64 = await FileSystem.readAsStringAsync(uri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      
+      console.log('[StoryUpload] File read as base64, length:', base64.length);
+      
+      if (base64.length === 0) {
+        console.error('[StoryUpload] Image file is empty');
+        return null;
+      }
+      
+      // For React Native, we can upload the base64 string directly
+      // Convert base64 to buffer for Supabase
+      const buffer = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+      
+      console.log('[StoryUpload] Converted to buffer, size:', buffer.length, 'bytes');
+      fileData = buffer as any; // Supabase accepts Uint8Array
+      
+    } catch (fetchError) {
+      console.error('[StoryUpload] Error reading image file:', fetchError);
+      return null;
+    }
     
     const fileName = `story-${storyId}-${Date.now()}.jpg`;
     const filePath = `stories/${fileName}`;
 
+    console.log('[StoryUpload] Uploading to path:', filePath);
+
     const { data, error } = await supabase.storage
       .from('story-images')
-      .upload(filePath, blob, {
+      .upload(filePath, fileData, {
         contentType: 'image/jpeg',
         upsert: false
       });
 
     if (error) {
-      console.error('Error uploading image:', error);
+      console.error('[StoryUpload] Upload error:', error);
       return null;
     }
 
-    // Get public URL
+    console.log('[StoryUpload] Upload successful, path:', data.path);
+
+    // Get public URL (story images can be public)
     const { data: { publicUrl } } = supabase.storage
       .from('story-images')
       .getPublicUrl(data.path);
 
+    console.log('[StoryUpload] Public URL generated:', publicUrl);
     return publicUrl;
   } catch (error) {
-    console.error('Error uploading image:', error);
+    console.error('[StoryUpload] Error uploading image:', error);
     return null;
   }
 };

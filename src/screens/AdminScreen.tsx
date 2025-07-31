@@ -25,7 +25,7 @@ import {
   fetchPendingVerifications, 
   fetchAdminStats,
   subscribeToVerificationChanges,
-  checkStorageBucketAccess,
+  debugStorageFiles,
   PendingVerification,
   AdminStats
 } from '@/src/actions/adminActions';
@@ -76,16 +76,8 @@ export const AdminScreen: React.FC = () => {
     try {
       console.log('[AdminScreen] Loading admin data...');
       
-      // Check storage bucket access first
-      const storageCheck = await checkStorageBucketAccess();
-      if (!storageCheck.accessible) {
-        console.warn('[AdminScreen] Storage bucket not accessible:', storageCheck.error);
-        Alert.alert(
-          'Storage Warning', 
-          'Image storage may not be accessible. Images might fail to load.\n\nError: ' + storageCheck.error,
-          [{ text: 'Continue Anyway', style: 'default' }]
-        );
-      }
+      // Debug storage files to help troubleshoot
+      await debugStorageFiles();
       
       const [verificationResult, statsResult] = await Promise.all([
         fetchPendingVerifications(),

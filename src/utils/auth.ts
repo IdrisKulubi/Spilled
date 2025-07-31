@@ -6,6 +6,7 @@ import { supabase, handleSupabaseError } from '../config/supabase';
 import { Database } from '../types/database';
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
+import * as FileSystem from 'expo-file-system';
 import { Platform } from 'react-native';
 
 export type User = Database['public']['Tables']['users']['Row'];
@@ -467,6 +468,7 @@ export const authUtils = {
   // Upload ID image for verification
   uploadVerificationImage: async (imageUri: string, idType: 'school_id' | 'national_id'): Promise<VerificationUploadResponse> => {
     try {
+      console.log('[Auth] Starting ID verification image upload...');
       const currentUser = await authUtils.getCurrentUser();
       if (!currentUser) {
         return {
@@ -475,62 +477,99 @@ export const authUtils = {
         };
       }
 
-      // Convert image to blob for upload
-      const response = await fetch(imageUri);
-      const blob = await response.blob();
+      console.log('[Auth] Converting image for upload...');
+      
+      // Use expo-file-system for reliable file reading
+      let fileData: Uint8Array;
+      
+      try {
+        // Read file as base64
+        const base64 = await FileSystem.readAsStringAsync(imageUri, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+        
+        console.log('[Auth] File read as base64, length:', base64.length);
+        
+        if (base64.length === 0) {
+          return {
+            success: false,
+            error: 'Image file is empty. Please select a valid image.'
+          };
+        }
+        
+        // For React Native, convert base64 to buffer for Supabase
+        const buffer = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+        
+        console.log('[Auth] Converted to buffer, size:', buffer.length, 'bytes');
+        fileData = buffer as any; // Supabase accepts Uint8Array
+        
+      } catch (fetchError) {
+        console.error('[Auth] Error reading image file:', fetchError);
+        return {
+          success: false,
+          error: 'Failed to read image file. Please try selecting the image again.'
+        };
+      }
       
       const fileName = `verification-${currentUser.id}-${Date.now()}.jpg`;
-      const filePath = fileName; // Remove the folder prefix since it's already in the bucket name
+      const filePath = `id-verification/${fileName}`; // Store in subfolder for organization
+      
+      console.log('[Auth] Uploading to path:', filePath);
 
-      // Upload to Supabase Storage
+      // Upload to Supabase Storage (private bucket)
       const { data, error } = await supabase.storage
         .from('id-verification')
-        .upload(filePath, blob, {
+        .upload(filePath, fileData, {
           contentType: 'image/jpeg',
           upsert: false
         });
 
       if (error) {
+        console.error('[Auth] Upload error:', error);
         return {
           success: false,
           error: handleSupabaseError(error)
         };
       }
 
-      // Get public URL
+      console.log('[Auth] Upload successful, path:', data.path);
+
+      // For private buckets, we store the storage path, not a public URL
+      // The admin panel will generate signed URLs when needed
       const { data: { publicUrl } } = supabase.storage
         .from('id-verification')
         .getPublicUrl(data.path);
+      
+      console.log('[Auth] Storage path:', publicUrl);
 
-      // Update user profile with ID image
+      // Update user profile with ID image path
       const updateData = {
         id_image_url: publicUrl,
         id_type: idType,
         verification_status: 'pending' as const
       };
 
+      console.log('[Auth] Updating user profile...');
       const { error: updateError } = await supabase
         .from('users')
         .update(updateData as any) // Type assertion to bypass strict typing
         .eq('id', currentUser.id as any); // Type assertion for ID
 
       if (updateError) {
-        console.error('Failed to update user profile:', updateError);
-      }
-
-      if (updateError) {
+        console.error('[Auth] Failed to update user profile:', updateError);
         return {
           success: false,
           error: handleSupabaseError(updateError)
         };
       }
 
+      console.log('[Auth] ID verification upload completed successfully');
       return {
         success: true,
         uploadUrl: publicUrl
       };
     } catch (error) {
-      console.error('Error uploading verification image:', error);
+      console.error('[Auth] Error uploading verification image:', error);
       return {
         success: false,
         error: 'Failed to upload verification image. Please try again.'
