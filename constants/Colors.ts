@@ -42,6 +42,7 @@ export const Colors = {
     redFlag: redFlag,
     success: successGreen,
     unsure: unsureYellow,
+    error: redFlag, // Use redFlag color for error states
     
     // Card and surface colors
     cardBackground: '#FFFFFF',
@@ -69,6 +70,7 @@ export const Colors = {
     redFlag: redFlag,
     success: successGreen,
     unsure: unsureYellow,
+    error: redFlag, // Use redFlag color for error states
     
     // Card and surface colors
     cardBackground: '#2D2D2D',

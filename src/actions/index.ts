@@ -30,3 +30,12 @@ export type {
   MessageResponse, 
   ChatHistory 
 } from './sendMessage';
+
+export { 
+  softDeleteStory, 
+  updateStory, 
+  deleteComment, 
+  checkStoryOwnership, 
+  checkCommentOwnership 
+} from './storyActions';
+export type { UpdateStoryData } from './storyActions';

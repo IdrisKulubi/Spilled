@@ -130,6 +130,22 @@ export const ExploreSection: React.FC = () => {
     loadStories();
   }, [loadStories]);
 
+  // Handle story update
+  const handleStoryUpdate = useCallback((updatedStory: StoryFeedItem) => {
+    setStories(prevStories => 
+      prevStories.map(story => 
+        story.id === updatedStory.id ? updatedStory : story
+      )
+    );
+  }, []);
+
+  // Handle story delete (remove from feed)
+  const handleStoryDelete = useCallback((storyId: string) => {
+    setStories(prevStories => 
+      prevStories.filter(story => story.id !== storyId)
+    );
+  }, []);
+
   // Render story item
   const renderStoryItem = ({ item }: { item: StoryFeedItem }) => (
     <StoryCard
@@ -137,6 +153,8 @@ export const ExploreSection: React.FC = () => {
       onReaction={handleReaction}
       onViewComments={handleViewComments}
       onAddComment={handleAddComment}
+      onStoryUpdate={handleStoryUpdate}
+      onStoryDelete={handleStoryDelete}
       isReacting={reacting === item.id}
     />
   );

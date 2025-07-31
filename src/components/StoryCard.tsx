@@ -19,6 +19,16 @@ import { Spacing } from '../constants/Styles';
 import { StatusTag } from './ui';
 import { StoryFeedItem, ReactionType } from '../actions/fetchStoriesFeed';
 import { UserProfileModal } from './UserProfileModal';
+import { StoryActionsModal } from './modals/StoryActionsModal';
+import { DeleteConfirmationModal } from './modals/DeleteConfirmationModal';
+import { EditStoryModal } from './modals/EditStoryModal';
+import { 
+  softDeleteStory, 
+  updateStory, 
+  checkStoryOwnership,
+  UpdateStoryData 
+} from '../actions/storyActions';
+import { useAuth } from '../contexts/AuthContext';
 
 
 
@@ -27,6 +37,8 @@ interface StoryCardProps {
   onReaction: (storyId: string, reactionType: ReactionType) => Promise<void>;
   onViewComments: (story: StoryFeedItem) => void;
   onAddComment: (story: StoryFeedItem) => void;
+  onStoryUpdate?: (updatedStory: StoryFeedItem) => void;
+  onStoryDelete?: (storyId: string) => void;
   isReacting?: boolean;
 }
 
@@ -35,10 +47,20 @@ export const StoryCard: React.FC<StoryCardProps> = ({
   onReaction,
   onViewComments,
   onAddComment,
+  onStoryUpdate,
+  onStoryDelete,
   isReacting = false
 }) => {
+  const { user } = useAuth();
   const [expandedText, setExpandedText] = useState(false);
   const [profileModalVisible, setProfileModalVisible] = useState(false);
+  
+  // Edit/Delete modal states
+  const [actionsModalVisible, setActionsModalVisible] = useState(false);
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
   
   // Truncate long stories for feed view
   const maxLength = 200;
@@ -150,6 +172,84 @@ export const StoryCard: React.FC<StoryCardProps> = ({
     }
   };
 
+  // Check if current user owns this story
+  const isOwner = user ? checkStoryOwnership(story, user.id) : false;
+
+  // Handle three-dots menu press
+  const handleActionsPress = () => {
+    if (isOwner) {
+      setActionsModalVisible(true);
+    }
+  };
+
+  // Handle edit story
+  const handleEditStory = () => {
+    setEditModalVisible(true);
+  };
+
+  // Handle delete story
+  const handleDeleteStory = () => {
+    setDeleteModalVisible(true);
+  };
+
+  // Confirm delete story
+  const handleConfirmDelete = async () => {
+    if (!user || !isOwner) return;
+
+    setIsDeleting(true);
+    try {
+      const response = await softDeleteStory(story.id, user.id);
+      
+      if (response.success) {
+        setDeleteModalVisible(false);
+        onStoryDelete?.(story.id);
+        Alert.alert('Story Deleted', 'Your story has been hidden successfully! 💕');
+      } else {
+        Alert.alert('Error', response.error || 'Failed to delete story');
+      }
+    } catch (error) {
+      console.error('Delete story error:', error);
+      Alert.alert('Error', 'Something went wrong bestie! 😭');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  // Handle story update
+  const handleStoryUpdate = async (updatedStory: StoryFeedItem) => {
+    if (!user || !isOwner) return;
+
+    setIsUpdating(true);
+    try {
+      const updateData: UpdateStoryData = {
+        guyName: updatedStory.guy_name,
+        guyPhone: updatedStory.guy_phone,
+        guySocials: updatedStory.guy_socials,
+        guyLocation: updatedStory.guy_location,
+        guyAge: updatedStory.guy_age,
+        storyText: updatedStory.text,
+        tags: updatedStory.tags,
+        imageUrl: updatedStory.image_url,
+        anonymous: updatedStory.anonymous,
+        nickname: updatedStory.nickname
+      };
+
+      const response = await updateStory(story.id, user.id, updateData);
+      
+      if (response.success) {
+        setEditModalVisible(false);
+        onStoryUpdate?.(updatedStory);
+      } else {
+        Alert.alert('Error', response.error || 'Failed to update story');
+      }
+    } catch (error) {
+      console.error('Update story error:', error);
+      Alert.alert('Error', 'Something went wrong bestie! 😭');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   // Handle profile modal
   const handleAuthorPress = () => {
     if (story.anonymous) {
@@ -229,6 +329,16 @@ export const StoryCard: React.FC<StoryCardProps> = ({
             <MaterialIcons name="chat-bubble-outline" size={24} color={Colors.light.text} />
           </TouchableOpacity>
         </View>
+
+        {/* Story Actions Menu - Three dots (only show for story owner) */}
+        {isOwner && (
+          <TouchableOpacity 
+            style={styles.storyActionsButton}
+            onPress={handleActionsPress}
+          >
+            <Text style={styles.storyActionsText}>•••</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Reaction counts */}
@@ -325,6 +435,34 @@ export const StoryCard: React.FC<StoryCardProps> = ({
         isAnonymous={story.anonymous}
         onClose={handleCloseProfileModal}
       />
+
+      {/* Story Actions Modal */}
+      <StoryActionsModal
+        visible={actionsModalVisible}
+        onClose={() => setActionsModalVisible(false)}
+        onEdit={handleEditStory}
+        onDelete={handleDeleteStory}
+        isOwner={isOwner}
+        itemType="story"
+      />
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        visible={deleteModalVisible}
+        onClose={() => setDeleteModalVisible(false)}
+        onConfirm={handleConfirmDelete}
+        itemType="story"
+        isDeleting={isDeleting}
+      />
+
+      {/* Edit Story Modal */}
+      <EditStoryModal
+        visible={editModalVisible}
+        story={story}
+        onClose={() => setEditModalVisible(false)}
+        onUpdate={handleStoryUpdate}
+        isUpdating={isUpdating}
+      />
     </View>
   );
 };
@@ -393,6 +531,9 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   actionsSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
   },
@@ -403,6 +544,18 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     padding: Spacing.xs,
+  },
+  storyActionsButton: {
+    padding: Spacing.xs,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  storyActionsText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#000000',
+    lineHeight: 20,
   },
   reactionButton: {
     padding: Spacing.xs,
