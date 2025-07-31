@@ -63,6 +63,63 @@ export const softDeleteStory = async (storyId: string, userId: string) => {
   }
 };
 
+// Update only guy information without touching the story
+export const updateGuyInfo = async (storyId: string, userId: string, guyData: {
+  guyName?: string;
+  guyPhone?: string;
+  guySocials?: string;
+  guyLocation?: string;
+  guyAge?: number;
+}) => {
+  try {
+    console.log('Updating guy info for story:', storyId, 'for user:', userId);
+
+    // First verify the user owns this story
+    const { data: story, error: fetchError } = await supabase
+      .from('stories')
+      .select('user_id, guy_id')
+      .eq('id', storyId)
+      .single();
+
+    if (fetchError) {
+      console.error('Error fetching story for update:', fetchError);
+      return { success: false, error: 'Story not found' };
+    }
+
+    if (story.user_id !== userId) {
+      return { success: false, error: 'You can only edit your own stories bestie! 🚫' };
+    }
+
+    // Update only the guy information (if guy exists)
+    if (story.guy_id) {
+      const { error: guyUpdateError } = await supabase
+        .from('guys')
+        .update({
+          name: guyData.guyName || null,
+          phone: guyData.guyPhone || null,
+          socials: guyData.guySocials || null,
+          location: guyData.guyLocation || null,
+          age: guyData.guyAge || null,
+        })
+        .eq('id', story.guy_id);
+
+      if (guyUpdateError) {
+        console.error('Error updating guy info:', guyUpdateError);
+        return { success: false, error: 'Failed to update person information' };
+      }
+
+      console.log('Guy info updated successfully');
+      return { success: true };
+    } else {
+      return { success: false, error: 'No person associated with this story' };
+    }
+
+  } catch (error) {
+    console.error('Unexpected error updating guy info:', error);
+    return { success: false, error: 'An unexpected error occurred' };
+  }
+};
+
 // Update story content
 export const updateStory = async (storyId: string, userId: string, updateData: UpdateStoryData) => {
   try {
@@ -94,7 +151,6 @@ export const updateStory = async (storyId: string, userId: string, updateData: U
           socials: updateData.guySocials || null,
           location: updateData.guyLocation || null,
           age: updateData.guyAge || null,
-          updated_at: new Date().toISOString()
         })
         .eq('id', story.guy_id);
 
@@ -105,7 +161,7 @@ export const updateStory = async (storyId: string, userId: string, updateData: U
     }
 
     // Update the story content
-    const { data: updatedStory, error: storyUpdateError } = await supabase
+    const { data: updatedStoryData, error: storyUpdateError } = await supabase
       .from('stories')
       .update({
         text: updateData.storyText,
@@ -113,19 +169,36 @@ export const updateStory = async (storyId: string, userId: string, updateData: U
         image_url: updateData.imageUrl || null,
         anonymous: updateData.anonymous,
         nickname: updateData.anonymous ? null : updateData.nickname,
-        updated_at: new Date().toISOString()
       })
       .eq('id', storyId)
       .eq('user_id', userId) // Double-check ownership
-      .select('*')
-      .single();
+      .select('*');
 
     if (storyUpdateError) {
       console.error('Error updating story:', storyUpdateError);
       return { success: false, error: 'Failed to update story. Please try again.' };
     }
 
-    return { success: true, story: updatedStory };
+    // If the update was successful but returned no data (because nothing changed),
+    // we can refetch the story to get the latest data.
+    const updatedStory = updatedStoryData?.[0];
+    if (updatedStory) {
+      return { success: true, story: updatedStory };
+    } else {
+      // Refetch the story to return the latest version
+      const { data: refetchedStory, error: refetchError } = await supabase
+        .from('stories')
+        .select('*')
+        .eq('id', storyId)
+        .single();
+      
+      if(refetchError) {
+        console.error('Error refetching story after update:', refetchError);
+        return { success: false, error: 'Failed to retrieve updated story.' };
+      }
+
+      return { success: true, story: refetchedStory };
+    }
   } catch (error) {
     console.error('Update story error:', error);
     return { success: false, error: 'Something went wrong bestie! 😭' };

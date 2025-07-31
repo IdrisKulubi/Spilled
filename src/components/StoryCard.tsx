@@ -154,14 +154,7 @@ export const StoryCard: React.FC<StoryCardProps> = ({
   };
 
   const getReactionSelectedStyle = (reactionType: ReactionType) => {
-    switch (reactionType) {
-      case 'red_flag':
-        return { backgroundColor: Colors.light.redFlag };
-      case 'good_vibes':
-        return { backgroundColor: Colors.light.success };
-      case 'unsure':
-        return { backgroundColor: Colors.light.unsure };
-    }
+    return {};
   };
 
   const getReactionIcon = (reactionType: ReactionType): string => {
@@ -576,7 +569,7 @@ const styles = StyleSheet.create({
   },
   reactionCount: {
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: 'bold',
     color: Colors.light.text,
     marginTop: 2,
     textAlign: 'center',
