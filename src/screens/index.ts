@@ -5,6 +5,7 @@
 
 export { SearchScreen } from './SearchScreen';
 export { GuyProfileScreen } from './GuyProfileScreen';
+export { HomeHubScreen } from './HomeHubScreen';
 export { AddPostScreen } from './AddPostScreen';
 export { ChatScreen } from './ChatScreen';
 export { SignUpScreen } from './SignUpScreen';

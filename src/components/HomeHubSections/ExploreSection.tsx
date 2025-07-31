@@ -1,10 +1,14 @@
+/**
+ * Explore Section Component - Shows latest stories and community activity
+ * Extracted from ExploreScreen
+ */
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
   View, 
   Text, 
-  SafeAreaView, 
-  FlatList, 
-  StyleSheet, 
+  FlatList,
+  StyleSheet,
   RefreshControl,
   ActivityIndicator,
   Alert 
@@ -24,7 +28,7 @@ import {
   ReactionType 
 } from '@/src/actions/fetchStoriesFeed';
 
-export default function ExploreScreen() {
+export const ExploreSection: React.FC = () => {
   const { user } = useAuth();
   const [stories, setStories] = useState<StoryFeedItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -52,7 +56,7 @@ export default function ExploreScreen() {
       }
     } catch (error) {
       console.error('Error loading stories:', error);
-      Alert.alert('Error', 'Something went wrong while loading stories');
+      Alert.alert('Error', 'Something went wrong bestie 😭');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -80,7 +84,7 @@ export default function ExploreScreen() {
   // Handle story reaction
   const handleReaction = useCallback(async (storyId: string, reactionType: ReactionType) => {
     if (!user) {
-      Alert.alert('Login Required', 'Please log in to react to stories');
+      Alert.alert('Sign In Required', 'Please sign in to react to stories bestie! 💕');
       return;
     }
 
@@ -96,7 +100,7 @@ export default function ExploreScreen() {
       }
     } catch (error) {
       console.error('Error reacting to story:', error);
-      Alert.alert('Error', 'Something went wrong');
+      Alert.alert('Error', 'Something went wrong bestie 😭');
     } finally {
       setReacting(null);
     }
@@ -110,7 +114,7 @@ export default function ExploreScreen() {
   // Handle add comment
   const handleAddComment = useCallback((story: StoryFeedItem) => {
     if (!user) {
-      Alert.alert('Login Required', 'Please log in to add comments');
+      Alert.alert('Sign In Required', 'Please sign in to add comments bestie! 💕');
       return;
     }
     setAddCommentModalStory(story);
@@ -144,12 +148,12 @@ export default function ExploreScreen() {
         <MaterialIcons name="forum" size={64} color={Colors.light.primary} />
         <Text style={styles.emptyTitle}>No Stories Yet</Text>
         <Text style={styles.emptyDescription}>
-          Be the first to share your story and help build this supportive community.
+          Be the first to spill the tea and help build this supportive community 💕
         </Text>
         <View style={styles.encouragementSection}>
           <MaterialIcons name="favorite" size={20} color={Colors.light.primary} />
           <Text style={styles.encouragementText}>
-            Every story shared helps another woman stay safe. Your experience matters.
+            Every story shared helps another girl stay safe. Your experience matters bestie! ✨
           </Text>
         </View>
       </TeaKECard>
@@ -166,15 +170,13 @@ export default function ExploreScreen() {
     );
   };
 
-
-
   return (
-    <SafeAreaView style={[TeaKEStyles.safeContainer, styles.container]}>
+    <View style={[styles.container, { paddingHorizontal: Spacing.md, paddingTop: Spacing.md }]}>
       {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.title}>Community Stories</Text>
+      <View style={styles.headerContainer}>
+        <Text style={styles.title}>Latest Tea ☕</Text>
         <Text style={styles.subtitle}>
-          Real experiences shared by women to help women
+          Real stories from real girls - stay safe out here! 💜
         </Text>
       </View>
 
@@ -182,7 +184,7 @@ export default function ExploreScreen() {
       {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={Colors.light.primary} />
-          <Text style={styles.loadingText}>Loading stories...</Text>
+          <Text style={styles.loadingText}>Loading the latest tea... ☕</Text>
         </View>
       ) : (
         <FlatList
@@ -220,21 +222,16 @@ export default function ExploreScreen() {
         onClose={() => setAddCommentModalStory(null)}
         onCommentAdded={handleCommentAdded}
       />
-    </SafeAreaView>
+    </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: Colors.light.background,
+    flex: 1,
   },
-  header: {
-    paddingHorizontal: Spacing.md,
-    paddingTop: Spacing.md,
-    paddingBottom: Spacing.lg,
-    backgroundColor: Colors.light.cardBackground,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.light.border,
+  headerContainer: {
+    marginBottom: Spacing.lg,
   },
   title: {
     fontSize: 24,
@@ -243,9 +240,9 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 16,
     color: Colors.light.textSecondary,
-    lineHeight: 20,
+    lineHeight: 22,
   },
   loadingContainer: {
     flex: 1,

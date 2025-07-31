@@ -41,10 +41,10 @@ export const StoryCard: React.FC<StoryCardProps> = ({
   const [profileModalVisible, setProfileModalVisible] = useState(false);
   
   // Truncate long stories for feed view
-  const maxLength = 150;
+  const maxLength = 200;
   const shouldTruncate = story.text.length > maxLength;
   const displayText = shouldTruncate && !expandedText 
-    ? story.text.substring(0, maxLength) + '...'
+    ? story.text.substring(0, maxLength).trim()
     : story.text;
 
   // Format time ago
@@ -247,12 +247,20 @@ export const StoryCard: React.FC<StoryCardProps> = ({
             <Text style={styles.authorNameInline}>{getAuthorDisplay()} </Text>
           </TouchableOpacity>
           {displayText}
-          {shouldTruncate && !expandedText && (
-            <TouchableOpacity onPress={() => setExpandedText(true)}>
-              <Text style={styles.readMore}> more</Text>
-            </TouchableOpacity>
-          )}
+          {shouldTruncate && !expandedText && '...'}
         </Text>
+        
+        {/* Read more/less buttons */}
+        {shouldTruncate && (
+          <TouchableOpacity 
+            style={styles.readMoreButton}
+            onPress={() => setExpandedText(!expandedText)}
+          >
+            <Text style={styles.readMoreText}>
+              {expandedText ? 'Show less' : 'Read more'}
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Tags */}
@@ -264,16 +272,30 @@ export const StoryCard: React.FC<StoryCardProps> = ({
         </View>
       )}
 
-      {/* Comments preview or Add Comment */}
+      {/* Comments section */}
       {story.comment_count > 0 ? (
-        <TouchableOpacity 
-          style={styles.commentsPreview}
-          onPress={() => onViewComments(story)}
-        >
-          <Text style={styles.commentsPreviewText}>
-            View all {story.comment_count} comments
-          </Text>
-        </TouchableOpacity>
+        <View style={styles.commentsSection}>
+          {/* View Comments button */}
+          <TouchableOpacity 
+            style={styles.commentsPreview}
+            onPress={() => onViewComments(story)}
+          >
+            <Text style={styles.commentsPreviewText}>
+              View all {story.comment_count} comments
+            </Text>
+          </TouchableOpacity>
+          
+          {/* Add Comment button */}
+          <TouchableOpacity 
+            style={styles.addCommentButtonSmall}
+            onPress={() => onAddComment(story)}
+          >
+            <MaterialIcons name="add-comment" size={20} color={Colors.light.primary} />
+            <Text style={styles.addCommentButtonSmallText}>
+              Add
+            </Text>
+          </TouchableOpacity>
+        </View>
       ) : (
         <TouchableOpacity 
           style={styles.addCommentButton}
@@ -428,9 +450,18 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: Colors.light.text,
   },
-  readMore: {
-    color: Colors.light.textSecondary,
-    fontWeight: '500',
+  readMoreButton: {
+    alignSelf: 'flex-start',
+    marginTop: Spacing.xs,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+    backgroundColor: Colors.light.accent,
+  },
+  readMoreText: {
+    color: Colors.light.primary,
+    fontWeight: '600',
+    fontSize: 12,
   },
   tagsSection: {
     flexDirection: 'row',
@@ -443,9 +474,15 @@ const styles = StyleSheet.create({
     marginRight: 0,
     marginBottom: 0,
   },
-  commentsPreview: {
+  commentsSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: Spacing.md,
     paddingBottom: Spacing.sm,
+  },
+  commentsPreview: {
+    flex: 1,
   },
   commentsPreviewText: {
     fontSize: 13,
@@ -465,6 +502,22 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: Colors.light.primary,
     fontWeight: '600',
+  },
+  addCommentButtonSmall: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    backgroundColor: Colors.light.accent,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.light.primary,
+  },
+  addCommentButtonSmallText: {
+    fontSize: 12,
+    color: Colors.light.primary,
+    fontWeight: '600',
+    marginLeft: 4,
   },
   safetyNotice: {
     flexDirection: 'row',
