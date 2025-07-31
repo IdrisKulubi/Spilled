@@ -50,6 +50,13 @@ function AppStack({ fontLoaded }: { fontLoaded: boolean }) {
           presentation: 'modal',
         }}
       />
+      <Stack.Screen
+        name="chat"
+        options={{
+          headerShown: false, // ChatScreen has its own header
+          presentation: 'card',
+        }}
+      />
     </Stack>
   );
 }

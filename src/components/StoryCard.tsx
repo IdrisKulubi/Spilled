@@ -18,6 +18,7 @@ import { Colors } from '../../constants/Colors';
 import { Spacing } from '../constants/Styles';
 import { StatusTag } from './ui';
 import { StoryFeedItem, ReactionType } from '../actions/fetchStoriesFeed';
+import { UserProfileModal } from './UserProfileModal';
 
 
 
@@ -37,6 +38,7 @@ export const StoryCard: React.FC<StoryCardProps> = ({
   isReacting = false
 }) => {
   const [expandedText, setExpandedText] = useState(false);
+  const [profileModalVisible, setProfileModalVisible] = useState(false);
   
   // Truncate long stories for feed view
   const maxLength = 150;
@@ -148,7 +150,21 @@ export const StoryCard: React.FC<StoryCardProps> = ({
     }
   };
 
+  // Handle profile modal
+  const handleAuthorPress = () => {
+    if (story.anonymous) {
+      Alert.alert(
+        'Anonymous User',
+        'This user chose to remain anonymous for privacy protection.'
+      );
+      return;
+    }
+    setProfileModalVisible(true);
+  };
 
+  const handleCloseProfileModal = () => {
+    setProfileModalVisible(false);
+  };
 
   return (
     <View style={styles.card}>
@@ -158,10 +174,10 @@ export const StoryCard: React.FC<StoryCardProps> = ({
           <View style={styles.avatarPlaceholder}>
             <MaterialIcons name="person" size={20} color={Colors.light.primary} />
           </View>
-          <View style={styles.authorText}>
+          <TouchableOpacity style={styles.authorText} onPress={handleAuthorPress}>
             <Text style={styles.authorName}>{getAuthorDisplay()}</Text>
             <Text style={styles.aboutText}>{getGuyDisplayInfo()}</Text>
-          </View>
+          </TouchableOpacity>
         </View>
         <Text style={styles.timeAgo}>{formatTimeAgo(story.created_at)}</Text>
       </View>
@@ -227,7 +243,9 @@ export const StoryCard: React.FC<StoryCardProps> = ({
       {/* Story content */}
       <View style={styles.contentSection}>
         <Text style={styles.storyText}>
-          <Text style={styles.authorNameInline}>{getAuthorDisplay()} </Text>
+          <TouchableOpacity onPress={handleAuthorPress}>
+            <Text style={styles.authorNameInline}>{getAuthorDisplay()} </Text>
+          </TouchableOpacity>
           {displayText}
           {shouldTruncate && !expandedText && (
             <TouchableOpacity onPress={() => setExpandedText(true)}>
@@ -276,6 +294,15 @@ export const StoryCard: React.FC<StoryCardProps> = ({
           </Text>
         </View>
       )}
+
+      {/* User Profile Modal */}
+      <UserProfileModal
+        visible={profileModalVisible}
+        userId={story.user_id}
+        nickname={story.nickname}
+        isAnonymous={story.anonymous}
+        onClose={handleCloseProfileModal}
+      />
     </View>
   );
 };
