@@ -69,6 +69,18 @@ export const ChatScreen: React.FC<ChatScreenProps> = () => {
       if (chatData) {
         setMessages(chatData.messages);
         setOtherUser(chatData.otherUser);
+      } else {
+        // Handle case where other user doesn't exist
+        Alert.alert(
+          'User Not Found', 
+          'The user you are trying to message could not be found. They may have deleted their account.',
+          [
+            {
+              text: 'Go Back',
+              onPress: () => router.back(),
+            }
+          ]
+        );
       }
     } catch (error) {
       console.error('Error loading chat history:', error);
@@ -76,7 +88,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = () => {
     } finally {
       setLoading(false);
     }
-  }, [otherUserId, user]);
+  }, [otherUserId, user, router]);
 
   // Send message
   const handleSendMessage = async () => {
@@ -229,7 +241,19 @@ export const ChatScreen: React.FC<ChatScreenProps> = () => {
   if (!otherUserId) {
     return (
       <SafeAreaView style={[TeaKEStyles.safeContainer, styles.container]}>
-        <Text>Invalid chat session</Text>
+        <View style={styles.errorContainer}>
+          <MaterialIcons name="error-outline" size={64} color={Colors.light.textSecondary} />
+          <Text style={styles.errorTitle}>Invalid Chat Session</Text>
+          <Text style={styles.errorSubtitle}>
+            Unable to start conversation. Please try again.
+          </Text>
+          <TouchableOpacity 
+            style={styles.backToHomeButton}
+            onPress={() => router.back()}
+          >
+            <Text style={styles.backToHomeText}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
       </SafeAreaView>
     );
   }
@@ -499,5 +523,36 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: Colors.light.textSecondary,
     marginLeft: 4,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.xl,
+  },
+  errorTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: Colors.light.text,
+    marginTop: Spacing.md,
+    marginBottom: Spacing.xs,
+  },
+  errorSubtitle: {
+    fontSize: 14,
+    color: Colors.light.textSecondary,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: Spacing.lg,
+  },
+  backToHomeButton: {
+    backgroundColor: Colors.light.primary,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.sm,
+    borderRadius: 8,
+  },
+  backToHomeText: {
+    color: Colors.light.background,
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

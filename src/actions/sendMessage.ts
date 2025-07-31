@@ -72,12 +72,20 @@ export const sendMessage = async (messageData: SendMessageData): Promise<Message
       .from('users')
       .select('id')
       .eq('id', messageData.receiverId)
-      .single();
+      .maybeSingle();
 
-    if (receiverError || !receiver) {
+    if (receiverError) {
+      console.error('Error checking receiver:', receiverError);
       return {
         success: false,
-        error: 'Recipient not found'
+        error: 'Failed to verify recipient'
+      };
+    }
+
+    if (!receiver) {
+      return {
+        success: false,
+        error: 'Recipient not found or account no longer exists'
       };
     }
 
@@ -138,10 +146,16 @@ export const fetchChatHistory = async (otherUserId: string): Promise<ChatHistory
       .from('users')
       .select('id, nickname')
       .eq('id', otherUserId)
-      .single();
+      .maybeSingle();
 
-    if (userError || !otherUser) {
+    if (userError) {
       console.error('Error fetching other user:', userError);
+      return null;
+    }
+
+    // If user doesn't exist, return null
+    if (!otherUser) {
+      console.error('Other user not found:', otherUserId);
       return null;
     }
 

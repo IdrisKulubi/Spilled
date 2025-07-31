@@ -40,25 +40,99 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
   const [loading, setLoading] = useState(false);
 
   const displayName = isAnonymous ? 'Anonymous Sister' : (nickname || 'A Sister');
-  const canMessage = !isAnonymous && userId !== user?.id;
+  
+  // Validate userId
+  const isValidUserId = userId && userId.trim() !== '' && userId !== 'undefined' && userId !== 'null';
+  const canMessage = !isAnonymous && isValidUserId && userId !== user?.id;
 
-  const handleSendMessage = () => {
+  // Early return if userId is invalid
+  if (!isValidUserId && visible) {
+    return (
+      <Modal
+        visible={visible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={onClose}
+      >
+        <SafeAreaView style={[TeaKEStyles.safeContainer, styles.container]}>
+          <View style={styles.header}>
+            <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+              <MaterialIcons name="close" size={24} color={Colors.light.text} />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Profile</Text>
+            <View style={styles.headerSpacer} />
+          </View>
+          <View style={styles.content}>
+            <TeaKECard style={styles.profileCard}>
+              <View style={styles.avatarContainer}>
+                <View style={styles.avatar}>
+                  <MaterialIcons name="error-outline" size={48} color={Colors.light.textSecondary} />
+                </View>
+              </View>
+              <View style={styles.userInfo}>
+                <Text style={styles.displayName}>Profile Unavailable</Text>
+                <Text style={styles.anonymousNote}>
+                  This user profile could not be loaded
+                </Text>
+              </View>
+            </TeaKECard>
+          </View>
+        </SafeAreaView>
+      </Modal>
+    );
+  }
+
+  const handleSendMessage = async () => {
     if (!canMessage) {
-      Alert.alert(
-        'Cannot Send Message',
-        isAnonymous 
-          ? 'Cannot message anonymous users for privacy protection.'
-          : 'Cannot message yourself.'
-      );
+      const reason = isAnonymous 
+        ? 'Cannot message anonymous users for privacy protection.'
+        : !isValidUserId
+        ? 'Invalid user profile.'
+        : 'Cannot message yourself.';
+        
+      Alert.alert('Cannot Send Message', reason);
       return;
     }
 
-    onClose();
-    // Navigate to chat screen with the user ID
-    router.push({
-      pathname: '/chat',
-      params: { userId, nickname: displayName }
-    });
+    setLoading(true);
+    
+    try {
+      // Validate messaging permissions and user existence
+      const { messagingUtils } = await import('@/src/utils/messaging');
+      const validation = await messagingUtils.validateCanMessage(userId);
+
+      if (!validation.canMessage) {
+        let title = 'Cannot Send Message';
+        let message = validation.error || 'Unable to send message at this time.';
+        
+        // Provide more user-friendly messages
+        if (validation.error === 'User not found') {
+          title = 'User Unavailable';
+          message = 'This user is no longer available for messaging. They may have deleted their account.';
+        } else if (validation.error === 'Invalid user ID format' || validation.error === 'Invalid user ID provided') {
+          title = 'Profile Error';
+          message = 'There was an issue with this user profile. Please try again later.';
+        }
+        
+        Alert.alert(title, message, [{ text: 'OK' }]);
+        return;
+      }
+
+      onClose();
+      // Navigate to chat screen with the validated user ID
+      router.push({
+        pathname: '/chat',
+        params: { 
+          userId, 
+          nickname: displayName 
+        }
+      });
+    } catch (error) {
+      console.error('Error validating messaging permissions:', error);
+      Alert.alert('Error', 'Failed to start conversation. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleClose = () => {
@@ -118,10 +192,11 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
             <View style={styles.actionsContainer}>
               {canMessage ? (
                 <TeaKEButton
-                  title="Send Message"
+                  title={loading ? "Validating..." : "Send Message"}
                   onPress={handleSendMessage}
                   size="medium"
                   style={styles.messageButton}
+                  disabled={loading}
                 />
               ) : (
                 <View style={styles.cannotMessageContainer}>

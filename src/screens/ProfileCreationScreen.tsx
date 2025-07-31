@@ -3,206 +3,281 @@
  * Ensures user profile is created in database before proceeding to verification
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
   Text,
   SafeAreaView,
-  StyleSheet,
-  ActivityIndicator
-} from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
-import { TeaKEStyles } from '@/src/constants/Styles';
-import { TeaKEButton, TeaKECard } from '@/src/components/ui';
-import { Colors } from '@/constants/Colors';
-import { useAuth } from '@/src/contexts/AuthContext';
+  ActivityIndicator,
+  TouchableOpacity,
+} from "react-native";
+import { TeaKEStyles } from "../constants/Styles";
+import { Colors } from "../../constants/Colors";
+import { useAuth } from "../contexts/AuthContext";
 
 export const ProfileCreationScreen: React.FC = () => {
   const { user, profileLoading, ensureProfileExists } = useAuth();
   const [attempts, setAttempts] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    createProfile();
-  }, []);
-
-  const createProfile = async () => {
+  const createProfile = useCallback(async () => {
     setError(null);
-    setAttempts(prev => prev + 1);
-    
+    setAttempts((prev) => prev + 1);
+
     const success = await ensureProfileExists();
     if (!success) {
-      setError('Failed to create your profile. Please try again.');
+      setError("Failed to create your profile. Please try again.");
     }
-  };
+  }, [ensureProfileExists]);
+
+  useEffect(() => {
+    createProfile();
+  }, [createProfile]);
 
   return (
-    <SafeAreaView style={[TeaKEStyles.safeContainer, styles.container]}>
-      <View style={styles.content}>
-        
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.iconContainer}>
-            <MaterialIcons 
-              name="account-circle" 
-              size={64} 
-              color={Colors.light.primary} 
-            />
+    <SafeAreaView style={TeaKEStyles.safeContainer}>
+      <View style={styles.container}>
+        {/* Header Section */}
+        <View style={styles.headerSection}>
+          <View style={styles.logoContainer}>
+            <Text style={styles.logoText}>TeaKE</Text>
+            <Text style={styles.logoEmoji}>☕️</Text>
           </View>
-          <Text style={[TeaKEStyles.h1, styles.title]}>
-            Setting up your profile
-          </Text>
-          <Text style={[TeaKEStyles.body, styles.subtitle]}>
-            We're creating your TeaKE profile...
+
+          <Text style={styles.tagline}>Almost there! ✨</Text>
+
+          <Text style={styles.subtitle}>
+            We&apos;re setting up your profile so you can start spilling the tea
           </Text>
         </View>
 
-        {/* Status Card */}
-        <TeaKECard style={styles.statusCard}>
-          <View style={styles.statusContent}>
-            {profileLoading ? (
-              <>
+        {/* Status Section */}
+        <View style={styles.statusSection}>
+          {profileLoading ? (
+            <View style={styles.statusCard}>
+              <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={Colors.light.primary} />
-                <Text style={[TeaKEStyles.h3, styles.statusTitle]}>
-                  Creating Profile...
+                <Text style={styles.statusTitle}>
+                  Creating your profile... 🎀
                 </Text>
-                <Text style={[TeaKEStyles.body, styles.statusDescription]}>
-                  This may take a few moments
+                <Text style={styles.statusDescription}>
+                  This might take a moment while we get everything ready
                 </Text>
                 {attempts > 1 && (
-                  <Text style={[TeaKEStyles.caption, styles.attemptText]}>
-                    Attempt {attempts}/3
+                  <Text style={styles.attemptText}>
+                    Attempt {attempts}/3 - Hang tight! 💪
                   </Text>
                 )}
-              </>
-            ) : error ? (
-              <>
-                <MaterialIcons name="error" size={48} color={Colors.light.warning} />
-                <Text style={[TeaKEStyles.h3, styles.errorTitle]}>
-                  Profile Setup Failed
+              </View>
+            </View>
+          ) : error ? (
+            <View style={styles.statusCard}>
+              <View style={styles.errorContainer}>
+                <Text style={styles.errorEmoji}>😅</Text>
+                <Text style={styles.statusTitle}>
+                  Oops! Something went wrong
                 </Text>
-                <Text style={[TeaKEStyles.body, styles.errorDescription]}>
-                  {error}
+                <Text style={styles.statusDescription}>
+                  {error} Don&apos;t worry, we&apos;ll get this sorted!
                 </Text>
-                <TeaKEButton
-                  title="Try Again"
-                  onPress={createProfile}
+                <TouchableOpacity
                   style={styles.retryButton}
-                />
-              </>
-            ) : (
-              <>
-                <MaterialIcons name="check-circle" size={48} color={Colors.light.success} />
-                <Text style={[TeaKEStyles.h3, styles.successTitle]}>
-                  Profile Created!
+                  onPress={createProfile}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.retryButtonText}>Try Again</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : (
+            <View style={styles.statusCard}>
+              <View style={styles.successContainer}>
+                <Text style={styles.successEmoji}>🎉</Text>
+                <Text style={styles.statusTitle}>
+                  Welcome to the sisterhood!
                 </Text>
-                <Text style={[TeaKEStyles.body, styles.successDescription]}>
-                  Welcome to TeaKE, {user?.nickname || 'friend'}!
+                <Text style={styles.statusDescription}>
+                  Hey {user?.nickname || "gorgeous"}! Your profile is all set up
+                  and ready to go ✨
                 </Text>
-              </>
-            )}
-          </View>
-        </TeaKECard>
-
-        {/* Info */}
-        <View style={styles.infoContainer}>
-          <MaterialIcons name="info" size={16} color={Colors.light.secondary} />
-          <Text style={[TeaKEStyles.caption, styles.infoText]}>
-            Your profile is securely stored and will be used for verification
-          </Text>
+              </View>
+            </View>
+          )}
         </View>
 
+        {/* Info Section */}
+        <View style={styles.infoSection}>
+          <View style={styles.infoCard}>
+            <Text style={styles.infoTitle}>🔒 Your privacy matters</Text>
+            <Text style={styles.infoText}>
+              Your profile is securely stored and will only be used for
+              verification. We&apos;ve got your back!
+            </Text>
+          </View>
+        </View>
       </View>
     </SafeAreaView>
   );
 };
 
-const styles = StyleSheet.create({
+const styles = {
   container: {
-    backgroundColor: Colors.light.background,
-  },
-  content: {
     flex: 1,
     paddingHorizontal: 24,
-    paddingVertical: 32,
-    justifyContent: 'center',
+    paddingTop: 60,
+    paddingBottom: 32,
+    justifyContent: "center" as const,
   },
-  header: {
-    alignItems: 'center',
-    marginBottom: 32,
+
+  headerSection: {
+    alignItems: "center" as const,
+    marginBottom: 50,
   },
-  iconContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: Colors.light.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
+
+  logoContainer: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     marginBottom: 16,
   },
-  title: {
-    textAlign: 'center',
-    marginBottom: 8,
+
+  logoText: {
+    fontSize: 36,
+    fontWeight: "bold" as const,
+    color: Colors.light.primary,
+    marginRight: 8,
   },
+
+  logoEmoji: {
+    fontSize: 32,
+  },
+
+  tagline: {
+    fontSize: 24,
+    fontWeight: "600" as const,
+    color: Colors.light.text,
+    textAlign: "center" as const,
+    marginBottom: 12,
+  },
+
   subtitle: {
-    textAlign: 'center',
-    color: Colors.light.secondary,
+    fontSize: 16,
+    color: Colors.light.textSecondary,
+    textAlign: "center" as const,
+    lineHeight: 24,
+    paddingHorizontal: 20,
   },
+
+  statusSection: {
+    marginBottom: 40,
+  },
+
   statusCard: {
-    marginBottom: 24,
+    backgroundColor: Colors.light.cardBackground,
+    borderRadius: 20,
+    padding: 32,
+    shadowColor: Colors.light.shadow,
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 6,
   },
-  statusContent: {
-    alignItems: 'center',
-    paddingVertical: 24,
+
+  loadingContainer: {
+    alignItems: "center" as const,
   },
+
+  errorContainer: {
+    alignItems: "center" as const,
+  },
+
+  successContainer: {
+    alignItems: "center" as const,
+  },
+
   statusTitle: {
+    fontSize: 20,
+    fontWeight: "600" as const,
+    color: Colors.light.text,
+    textAlign: "center" as const,
     marginTop: 16,
-    marginBottom: 8,
-    textAlign: 'center',
+    marginBottom: 12,
   },
+
   statusDescription: {
-    textAlign: 'center',
-    color: Colors.light.secondary,
+    fontSize: 16,
+    color: Colors.light.textSecondary,
+    textAlign: "center" as const,
+    lineHeight: 24,
     marginBottom: 8,
   },
+
   attemptText: {
-    color: Colors.light.secondary,
-    fontStyle: 'italic',
+    fontSize: 14,
+    color: Colors.light.textSecondary,
+    textAlign: "center" as const,
+    fontStyle: "italic" as const,
+    marginTop: 8,
   },
-  errorTitle: {
-    marginTop: 16,
-    marginBottom: 8,
-    textAlign: 'center',
-    color: Colors.light.warning,
+
+  errorEmoji: {
+    fontSize: 48,
   },
-  errorDescription: {
-    textAlign: 'center',
-    color: Colors.light.secondary,
-    marginBottom: 16,
+
+  successEmoji: {
+    fontSize: 48,
   },
+
   retryButton: {
-    minWidth: 120,
+    backgroundColor: Colors.light.primary,
+    borderRadius: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    marginTop: 20,
+    shadowColor: Colors.light.primary,
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
-  successTitle: {
-    marginTop: 16,
+
+  retryButtonText: {
+    fontSize: 16,
+    fontWeight: "700" as const,
+    color: Colors.light.textOnPrimary,
+    textAlign: "center" as const,
+  },
+
+  infoSection: {
+    alignItems: "center" as const,
+  },
+
+  infoCard: {
+    backgroundColor: Colors.light.accent,
+    borderRadius: 16,
+    padding: 20,
+    borderLeftWidth: 4,
+    borderLeftColor: Colors.light.primary,
+    maxWidth: 320,
+  },
+
+  infoTitle: {
+    fontSize: 16,
+    fontWeight: "600" as const,
+    color: Colors.light.text,
     marginBottom: 8,
-    textAlign: 'center',
-    color: Colors.light.success,
+    textAlign: "center" as const,
   },
-  successDescription: {
-    textAlign: 'center',
-    color: Colors.light.secondary,
-  },
-  infoContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 16,
-  },
+
   infoText: {
-    marginLeft: 8,
-    color: Colors.light.secondary,
-    textAlign: 'center',
-    flex: 1,
+    fontSize: 14,
+    color: Colors.light.textSecondary,
+    lineHeight: 20,
+    textAlign: "center" as const,
   },
-});
+};
