@@ -18,6 +18,7 @@ import { Colors } from "../../constants/Colors";
 import { addPost, CreatePostData, uploadStoryImage } from "../actions/addPost";
 import { MaterialIcons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import { validateFileUpload, FILE_UPLOAD_CONFIGS } from "../utils/fileValidation";
 
 type TagType = "red_flag" | "good_vibes" | "unsure";
 
@@ -80,7 +81,7 @@ export const AddPostScreen: React.FC = () => {
       });
 
       if (!result.canceled && result.assets[0]) {
-        setImageUri(result.assets[0].uri);
+        await validateAndSetImage(result.assets[0].uri);
       }
     } catch (error) {
       console.error(error);
@@ -98,11 +99,36 @@ export const AddPostScreen: React.FC = () => {
       });
 
       if (!result.canceled && result.assets[0]) {
-        setImageUri(result.assets[0].uri);
+        await validateAndSetImage(result.assets[0].uri);
       }
     } catch (error) {
       console.error(error);
       Alert.alert("Error", "Failed to take photo. Please try again.");
+    }
+  };
+
+  const validateAndSetImage = async (uri: string) => {
+    if (!user) {
+      Alert.alert("Error", "You must be logged in to upload images.");
+      return;
+    }
+
+    // Show loading state
+    Alert.alert("Validating Image", "Please wait while we validate your image...");
+
+    try {
+      const validation = await validateFileUpload(uri, 'story_image', user.id);
+      
+      if (!validation.isValid) {
+        Alert.alert("Invalid Image", validation.error || "The selected image is not valid.");
+        return;
+      }
+
+      setImageUri(uri);
+      Alert.alert("Success", "Image validated successfully!");
+    } catch (error) {
+      console.error("Image validation error:", error);
+      Alert.alert("Validation Error", "Failed to validate image. Please try again.");
     }
   };
 

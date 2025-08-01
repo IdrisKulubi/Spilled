@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "TeaKE",
-    "slug": "teake-app",
+    "slug": "teake",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -37,11 +37,13 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "your-eas-project-id"
-      }
+        "projectId": "e5976057-cc53-492e-b8b7-d791a04c4540"
+      },
+      "router": {}
     },
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "owner": "vehem23"
   }
 }
