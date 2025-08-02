@@ -13,10 +13,10 @@ import {
   TouchableOpacity
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { TeaKEStyles } from '@/src/constants/Styles';
-import {  TeaKECard } from '@/src/components/ui';
-import { Colors } from '@/constants/Colors';
-import { useAuth } from '@/src/contexts/AuthContext';
+import { TeaKEStyles } from '../constants/Styles';
+import {  TeaKECard } from '../components/ui';
+import { Colors } from '../../constants/Colors';
+import { useAuth } from '../contexts/AuthContext';
 
 interface VerificationPendingScreenProps {
   user: {

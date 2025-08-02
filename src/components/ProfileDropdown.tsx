@@ -13,8 +13,8 @@ import {
   Pressable,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { Colors } from '@/constants/Colors';
-import { useAuth } from '@/src/contexts/AuthContext';
+import { Colors } from '../../constants/Colors';
+import { useAuth } from '../contexts/AuthContext';
 import { useRouter } from 'expo-router';
 
 interface ProfileDropdownProps {

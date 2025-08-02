@@ -14,11 +14,11 @@ import {
   ActivityIndicator
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { Colors } from '@/constants/Colors';
-import { TeaKEStyles, Spacing } from '@/src/constants/Styles';
-import { TeaKEButton, TeaKECard } from '@/src/components/ui';
+import { Colors } from '../../constants/Colors';
+import { TeaKEStyles, Spacing } from '../constants/Styles';
+import { TeaKEButton, TeaKECard } from '../components/ui';
 import { useRouter } from 'expo-router';
-import { useAuth } from '@/src/contexts/AuthContext';
+import { useAuth } from '../contexts/AuthContext';
 
 interface UserProfileModalProps {
   visible: boolean;
@@ -98,7 +98,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
     
     try {
       // Validate messaging permissions and user existence
-      const { messagingUtils } = await import('@/src/utils/messaging');
+      const { messagingUtils } = await import('../utils/messaging');
       const validation = await messagingUtils.validateCanMessage(userId);
 
       if (!validation.canMessage) {

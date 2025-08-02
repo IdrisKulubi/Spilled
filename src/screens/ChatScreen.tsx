@@ -18,7 +18,7 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Colors } from '@/constants/Colors';
+import { Colors } from '../../constants/Colors';
 import { TeaKEStyles, Spacing } from '../constants/Styles';
 import { useAuth } from '../contexts/AuthContext';
 import { 

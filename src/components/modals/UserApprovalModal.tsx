@@ -17,15 +17,15 @@ import {
   Dimensions
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { Colors } from '@/constants/Colors';
-import { Spacing } from '@/src/constants/Styles';
-import { TeaKEButton, TeaKECard } from '@/src/components/ui';
+import { Colors } from '../../../constants/Colors';
+import { Spacing } from '../../constants/Styles';
+import { TeaKEButton, TeaKECard } from '../../components/ui';
 import { 
   approveUserVerification, 
   rejectUserVerification,
   getSignedImageUrl,
   PendingVerification 
-} from '@/src/actions/adminActions';
+} from '../../actions/adminActions';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 

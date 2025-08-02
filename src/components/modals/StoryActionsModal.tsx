@@ -13,8 +13,8 @@ import {
   TouchableWithoutFeedback,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { Colors } from '@/constants/Colors';
-import { Spacing } from '@/src/constants/Styles';
+import { Colors } from '../../../constants/Colors';
+import { Spacing } from '../../constants/Styles';
 
 interface StoryActionsModalProps {
   visible: boolean;

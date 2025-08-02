@@ -5,9 +5,9 @@ import { StatusBar } from 'expo-status-bar';
 import React from 'react';
 import 'react-native-reanimated';
 
-import { useColorScheme } from '@/hooks/useColorScheme';
-import { AuthProvider, useAuth } from '@/src/contexts/AuthContext';
-import { SplashScreen } from '@/components/SplashScreen';
+import { useColorScheme } from '../hooks/useColorScheme';
+import { AuthProvider, useAuth } from '../src/contexts/AuthContext';
+import { SplashScreen } from '../components/SplashScreen';
 
 // This component now receives fontLoaded as a prop
 function AppStack({ fontLoaded }: { fontLoaded: boolean }) {

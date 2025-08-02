@@ -13,20 +13,20 @@ import {
   ActivityIndicator,
   Alert 
 } from 'react-native';
-import { useAuth } from '@/src/contexts/AuthContext';
-import { TeaKEStyles, Spacing } from '@/src/constants/Styles';
-import { TeaKECard } from '@/src/components/ui';
-import { Colors } from '@/constants/Colors';
+import { useAuth } from '../../contexts/AuthContext';
+import { TeaKEStyles, Spacing } from '../../constants/Styles';
+import { TeaKECard } from '../../components/ui';
+import { Colors } from '../../../constants/Colors';
 import { MaterialIcons } from '@expo/vector-icons';
-import { StoryCard } from '@/src/components/StoryCard';
-import { CommentsBottomSheet } from '@/src/components/CommentsBottomSheet';
-import { AddCommentModal } from '@/src/components/AddCommentModal';
+import { StoryCard } from '../../components/StoryCard';
+import { CommentsBottomSheet } from '../../components/CommentsBottomSheet';
+import { AddCommentModal } from '../../components/AddCommentModal';
 import { 
   fetchStoriesFeed, 
   reactToStory, 
   StoryFeedItem, 
   ReactionType 
-} from '@/src/actions/fetchStoriesFeed';
+} from '../../actions/fetchStoriesFeed';
 
 export const ExploreSection: React.FC = () => {
   const { user } = useAuth();

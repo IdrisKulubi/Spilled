@@ -1,10 +1,10 @@
 {
   "expo": {
-    "name": "TeaKE",
-    "slug": "teake-app",
+    "name": "Tea",
+    "slug": "teake",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/teakelogo.png",
     "scheme": "teake",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -12,11 +12,22 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.teake.app",
+      "versionCode": 1,
+      "compileSdkVersion": 34,
+      "targetSdkVersion": 34,
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "foregroundImage": "./assets/images/splashimage.png",
         "backgroundColor": "#FFF8F9"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "INTERNET",
+        "ACCESS_NETWORK_STATE"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -28,7 +39,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/images/splashimage.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#FFF8F9"
@@ -37,9 +48,11 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "your-eas-project-id"
+        "projectId": "e5976057-cc53-492e-b8b7-d791a04c4540"
       }
     },
+    "privacy": "public",
+    "description": "TeaKE - A platform for women to share experiences and stay safe by warning others about concerning behavior from men they've encountered.",
     "experiments": {
       "typedRoutes": true
     }

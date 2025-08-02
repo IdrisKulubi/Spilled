@@ -20,11 +20,11 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { useAuth } from '@/src/contexts/AuthContext';
-import { TeaKEButton, TeaKECard, StatusTag } from '@/src/components/ui';
-import { Colors } from '@/constants/Colors';
-import { Spacing } from '@/src/constants/Styles';
-import { StoryFeedItem } from '@/src/actions/fetchStoriesFeed';
+import { useAuth } from '../../contexts/AuthContext';
+import { TeaKEButton, TeaKECard, StatusTag } from '../../components/ui';
+import { Colors } from '../../../constants/Colors';
+import { Spacing } from '../../constants/Styles';
+import { StoryFeedItem } from '../../actions/fetchStoriesFeed';
 
 type TagType = 'red_flag' | 'good_vibes' | 'unsure';
 

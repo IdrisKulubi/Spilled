@@ -15,12 +15,12 @@ import {
 } from 'react-native';
 import { TabView, SceneMap, TabBar } from 'react-native-tab-view';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useAuth } from '@/src/contexts/AuthContext';
-import { TeaKEStyles, Spacing } from '@/src/constants/Styles';
-import { Colors } from '@/constants/Colors';
+import { useAuth } from '../contexts/AuthContext';
+import { TeaKEStyles, Spacing } from '../constants/Styles';
+import { Colors } from '../../constants/Colors';
 import { MaterialIcons } from '@expo/vector-icons';
-import { ProfileDropdown } from '@/src/components/ProfileDropdown';
-import { SearchSection, ShareStorySection, ExploreSection } from '@/src/components/HomeHubSections';
+import { ProfileDropdown } from '../components/ProfileDropdown';
+import { SearchSection, ShareStorySection, ExploreSection } from '../components/HomeHubSections';
 
 const LAST_TAB_STORAGE_KEY = '@TeaKE:lastSelectedTab';
 

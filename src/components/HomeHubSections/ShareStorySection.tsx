@@ -10,9 +10,9 @@ import {
   StyleSheet,
   TouchableOpacity 
 } from 'react-native';
-import { TeaKEStyles, Spacing } from '@/src/constants/Styles';
-import { TeaKEButton, TeaKECard } from '@/src/components/ui';
-import { Colors } from '@/constants/Colors';
+import { TeaKEStyles, Spacing } from '../../constants/Styles';
+import { TeaKEButton, TeaKECard } from '../../components/ui';
+import { Colors } from '../../../constants/Colors';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 

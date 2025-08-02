@@ -4,12 +4,12 @@
  */
 
 import React from 'react';
-import { useAuth } from '@/src/contexts/AuthContext';
-import { HomeHubScreen } from '@/src/screens/HomeHubScreen';
-import { VerificationScreen } from '@/src/screens/VerificationScreen';
-import { VerificationPendingScreen } from '@/src/screens/VerificationPendingScreen';
-import { SignInScreen } from '@/src/screens/SignInScreen';
-import { ProfileCreationScreen } from '@/src/screens/ProfileCreationScreen';
+import { useAuth } from '../src/contexts/AuthContext';
+import { HomeHubScreen } from '../src/screens/HomeHubScreen';
+import { VerificationScreen } from '../src/screens/VerificationScreen';
+import { VerificationPendingScreen } from '../src/screens/VerificationPendingScreen';
+import { SignInScreen } from '../src/screens/SignInScreen';
+import { ProfileCreationScreen } from '../src/screens/ProfileCreationScreen';
 
 export default function MainApp() {
   const { user, loading } = useAuth();

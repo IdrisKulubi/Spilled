@@ -15,10 +15,10 @@ import {
   ActivityIndicator,
   FlatList
 } from 'react-native';
-import { useAuth } from '@/src/contexts/AuthContext';
-import { TeaKEStyles, Spacing } from '@/src/constants/Styles';
-import { TeaKEButton, TeaKECard } from '@/src/components/ui';
-import { Colors } from '@/constants/Colors';
+import { useAuth } from '../contexts/AuthContext';
+import { TeaKEStyles, Spacing } from '../constants/Styles';
+import { TeaKEButton, TeaKECard } from '../components/ui';
+import { Colors } from '../../constants/Colors';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { 
@@ -28,8 +28,8 @@ import {
   debugStorageFiles,
   PendingVerification,
   AdminStats
-} from '@/src/actions/adminActions';
-import { UserApprovalModal } from '@/src/components/modals/UserApprovalModal';
+} from '../actions/adminActions';
+import { UserApprovalModal } from '../components/modals/UserApprovalModal';
 
 export const AdminScreen: React.FC = () => {
   const { user, isAdmin } = useAuth();

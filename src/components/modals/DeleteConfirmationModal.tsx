@@ -13,9 +13,9 @@ import {
   TouchableWithoutFeedback,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { Colors } from '@/constants/Colors';
-import { Spacing } from '@/src/constants/Styles';
-import { TeaKEButton } from '@/src/components/ui';
+import { Colors } from '../../../constants/Colors';
+import { Spacing } from '../../constants/Styles';
+import { TeaKEButton } from '../../components/ui';
 
 interface DeleteConfirmationModalProps {
   visible: boolean;

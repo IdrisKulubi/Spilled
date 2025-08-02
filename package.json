@@ -8,12 +8,15 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "build:android": "node scripts/build-android.js",
+    "build:android:production": "node scripts/build-android.js production",
+    "build:android:preview": "node scripts/build-android.js preview"
   },
   "dependencies": {
     "@expo/vector-icons": "^14.1.0",
     "@hookform/resolvers": "^5.2.1",
-    "@react-native-async-storage/async-storage": "^2.1.2",
+    "@react-native-async-storage/async-storage": "2.1.2",
     "@react-navigation/bottom-tabs": "^7.3.10",
     "@react-navigation/elements": "^2.3.8",
     "@react-navigation/native": "^7.1.6",
@@ -47,11 +50,11 @@
     "react-native-gesture-handler": "~2.24.0",
     "react-native-keyboard-aware-scroll-view": "^0.9.5",
     "react-native-modal": "^14.0.0-rc.1",
-    "react-native-pager-view": "^6.8.1",
+    "react-native-pager-view": "6.7.1",
     "react-native-reanimated": "~3.17.4",
     "react-native-safe-area-context": "5.4.0",
     "react-native-screens": "~4.11.1",
-    "react-native-svg": "^15.11.2",
+    "react-native-svg": "15.11.2",
     "react-native-svg-transformer": "^1.5.1",
     "react-native-tab-view": "^4.1.2",
     "react-native-toast-message": "^2.3.3",
@@ -67,6 +70,10 @@
     "eslint": "^9.25.0",
     "eslint-config-expo": "~9.2.0",
     "typescript": "~5.8.3"
+  },
+  "overrides": {
+    "ajv": "^8.17.1",
+    "ajv-keywords": "^5.1.0"
   },
   "private": true
 }
