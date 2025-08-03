@@ -1,10 +1,11 @@
-# TeaKE - "Is He Seeing Others?"
+# Spilled- "Is He Seeing Others?"
 
 A React Native app built with Expo that helps Kenyan women discreetly check if the guy they're dating is seeing other people.
 
 ## 🚀 Quick Start
 
 ### 1. Prerequisites
+
 - Node.js 18+ installed
 - Expo CLI: `npm install -g @expo/cli`
 - Supabase account
@@ -20,6 +21,7 @@ A React Native app built with Expo that helps Kenyan women discreetly check if t
 ### 3. Environment Setup
 
 1. Copy `.env.example` to `.env`:
+
    ```bash
    cp .env.example .env
    ```
@@ -32,13 +34,13 @@ A React Native app built with Expo that helps Kenyan women discreetly check if t
 
 ### 4. Install Dependencies
 
-   ```bash
-   npm install
-   ```
+```bash
+npm install
+```
 
 ### 5. Run the App
 
-   ```bash
+```bash
 # Start Expo development server
 npm start
 
@@ -51,6 +53,7 @@ npm run web     # Web browser
 ## 📱 Features
 
 ### Core Features
+
 - **🔍 Search for guys** by name, phone, or social handles
 - **📝 Anonymous posting** about dating experiences
 - **💬 Private messaging** with end-to-end encryption
@@ -58,6 +61,7 @@ npm run web     # Web browser
 - **🆔 ID verification** with school ID or national ID upload
 
 ### Security & Privacy
+
 - **ID verification required** - Only verified women can post/comment/message
 - End-to-end encrypted messages
 - Messages auto-delete after 7 days
@@ -68,12 +72,14 @@ npm run web     # Web browser
 ## 🏗️ Architecture
 
 ### Tech Stack
+
 - **Frontend**: React Native + Expo
 - **Backend**: Supabase (PostgreSQL + Auth + Storage)
 - **Styling**: NativeWind (Tailwind for React Native)
 - **Language**: TypeScript
 
 ### Folder Structure
+
 ```
 src/
 ├── screens/           # Main app screens
@@ -102,6 +108,7 @@ src/
 ## 🎨 Design System
 
 ### Colors
+
 - **Primary**: `#D96BA0` (Muted Rose)
 - **Background**: `#FFF8F9` (Light Blush White)
 - **Accent**: `#FDECEF` (Soft Blush)
@@ -110,6 +117,7 @@ src/
 - **Unsure**: `#FFD23F` (Gentle Yellow)
 
 ### Components
+
 - **TeaKEButton**: Primary, secondary, and danger variants
 - **StatusTag**: Visual tags for story categorization
 - **TeaKECard**: Consistent card styling with optional press handling
@@ -117,6 +125,7 @@ src/
 ## 🗄️ Database Schema
 
 ### Tables
+
 - **users**: User profiles and verification status
 - **guys**: Guy profiles created by users
 - **stories**: Posts/experiences about guys
@@ -124,6 +133,7 @@ src/
 - **messages**: Encrypted messages between users
 
 ### Key Features
+
 - Row-level security (RLS) for data protection
 - Auto-expiring messages (7 days)
 - Full-text search for guy profiles
@@ -139,72 +149,18 @@ src/
 4. **Components**: Create reusable UI in `src/components/`
 5. **Screens**: Add new screens in `src/screens/`
 
-### Authentication Flow
-
-```typescript
-import { useAuth } from '../contexts/AuthContext';
-
-const { user, signUp, signIn, uploadVerificationImage } = useAuth();
-
-// Sign up with email
-await signUp('user@example.com', 'password123', 'nickname', '0712345678');
-
-// Sign in
-await signIn('user@example.com', 'password123');
-
-// Upload ID for verification
-await uploadVerificationImage(imageUri, 'school_id');
-```
-
-### Database Operations
-
-```typescript
-import { addPost, fetchGuyProfile } from '../actions';
-
-// Create a post
-const result = await addPost({
-  guyName: 'John Doe',
-  storyText: 'He was really sweet...',
-  tags: ['good_vibes'],
-  anonymous: true
-});
-
-// Search for a guy
-const profile = await fetchGuyProfile({
-  name: 'John',
-  phone: '0712345678'
-});
-```
-
-## 🚦 Production Deployment
-
-### 1. Build Configuration
-```bash
-# Build for production
-expo build:android
-expo build:ios
-```
-
-### 2. Environment Variables
-Ensure production environment variables are set:
-- Supabase production URLs
-- SMS provider configuration
-- Any analytics/monitoring keys
-
-### 3. App Store Submission
-- Follow [Expo's app store guidelines](https://docs.expo.dev/distribution/app-stores/)
-- Ensure content policy compliance
-- Set up proper app metadata and screenshots
 
 ## 🛡️ Legal & Safety
 
 ### Content Moderation
+
 - Community reporting system
 - Admin moderation panel
 - Clear community guidelines
 - Right to response mechanism
 
 ### Privacy Protection
+
 - Anonymous posting by default
 - Encrypted communications
 - No permanent message storage
@@ -225,6 +181,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## ⚠️ Disclaimer
 
 This app is designed to promote safety and transparency in dating. Users are expected to:
+
 - Share truthful information
 - Respect others' privacy
 - Follow community guidelines
