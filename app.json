@@ -1,10 +1,10 @@
 {
   "expo": {
-    "name": "Tea",
+    "name": "Spilled",
     "slug": "teake",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/teakelogo.png",
+    "icon": "./assets/images/spilled-icon.png",
     "scheme": "teake",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -12,12 +12,12 @@
       "supportsTablet": true
     },
     "android": {
-      "package": "com.teake.app",
+      "package": "com.spilled.app",
       "versionCode": 1,
       "compileSdkVersion": 34,
       "targetSdkVersion": 34,
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/splashimage.png",
+        "foregroundImage": "./assets/images/spilled-icon.png",
         "backgroundColor": "#FFF8F9"
       },
       "edgeToEdgeEnabled": true,
@@ -39,7 +39,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splashimage.png",
+          "image": "./assets/images/spilled-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#FFF8F9"
@@ -52,7 +52,7 @@
       }
     },
     "privacy": "public",
-    "description": "TeaKE - A platform for women to share experiences and stay safe by warning others about concerning behavior from men they've encountered.",
+    "description": "Spilled - A platform for women to share experiences and stay safe by warning others about concerning behavior from men they've encountered.",
     "experiments": {
       "typedRoutes": true
     }
