@@ -54,7 +54,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         if (currentUser?.email) {
           const adminStatus = isUserAdmin(currentUser.email);
           setIsAdmin(adminStatus);
-          console.log(`[AuthContext] Admin status: ${adminStatus} for ${currentUser.email}`);
         } else {
           setIsAdmin(false);
         }
@@ -69,10 +68,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     // Listen for auth state changes
     const { data: { subscription } } = authUtils.onAuthStateChange(async (event, session) => {
-      console.log('[Auth] Auth state change event:', event);
       
       if (event === 'SIGNED_IN' && session?.user) {
-        console.log('[Auth] User signed in, creating provisional user object...');
         // Set user to a *provisional* object first.
         // It's missing `created_at`, which we use to detect a real DB profile.
         setUser({
@@ -92,21 +89,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         if (session.user.email) {
           const adminStatus = isUserAdmin(session.user.email);
           setIsAdmin(adminStatus);
-          console.log(`[AuthContext] Admin status for provisional user: ${adminStatus} for ${session.user.email}`);
         } else {
           setIsAdmin(false);
         }
         
-        console.log('[Auth] Provisional user set, auth loading is complete.');
         setLoading(false);
       } else if (event === 'SIGNED_OUT') {
-        console.log('[Auth] User signed out, clearing user state');
         setUser(null);
         setIsAdmin(false);
         setLoading(false);
       } else {
         // For any other auth events, ensure loading is false
-        console.log('[Auth] Auth event processed, setting loading to false');
         setLoading(false);
       }
     });
@@ -207,11 +200,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Ensure profile exists in database - MUST be called before verification screen
   const ensureProfileExists = async (): Promise<boolean> => {
     if (!user) {
-      console.log('❌ [Profile] No user session - cannot ensure profile');
       return false;
     }
 
-    console.log('🔧 [Profile] Ensuring profile exists for verification...');
     setProfileLoading(true);
 
     try {
@@ -221,7 +212,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       while (attempts < maxAttempts) {
         attempts++;
-        console.log(`🔄 [Profile] Profile creation attempt ${attempts}/${maxAttempts}`);
         
         try {
           const userProfile = await authUtils.ensureUserProfile(
@@ -233,27 +223,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           
           // Update user with database profile
           setUser(userProfile);
-          console.log('✅ [Profile] Profile successfully ensured for verification');
           setProfileLoading(false);
           return true;
           
         } catch (error) {
-          console.error(`❌ [Profile] Attempt ${attempts} failed:`, error);
+          console.error(` [Profile] Attempt ${attempts} failed:`, error);
           if (attempts < maxAttempts) {
             // Wait before retry (exponential backoff)
             const delay = attempts * 1000;
-            console.log(`⏳ [Profile] Retrying in ${delay}ms...`);
             await new Promise(resolve => setTimeout(resolve, delay));
           }
         }
       }
       
-      console.error('❌ [Profile] All profile creation attempts failed');
+      console.error(' [Profile] All profile creation attempts failed');
       setProfileLoading(false);
       return false;
       
     } catch (error) {
-      console.error('❌ [Profile] Unexpected error ensuring profile:', error);
+      console.error(' [Profile] Unexpected error ensuring profile:', error);
       setProfileLoading(false);
       return false;
     }

@@ -27,8 +27,6 @@ const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'YOUR_SUPAB
 // Admin configuration
 export const ADMIN_EMAIL = process.env.EXPO_PUBLIC_ADMIN_EMAIL || 'kulubiidris@gmail.com';
 
-console.log('🔧 [Supabase] Initializing with URL:', supabaseUrl);
-console.log('🔧 [Supabase] App scheme:', process.env.EXPO_PUBLIC_SCHEME || 'teake');
 
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {

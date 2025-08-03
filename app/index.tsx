@@ -16,20 +16,17 @@ export default function MainApp() {
 
   // If not logged in, show sign in screen
   if (!user) {
-    console.log('[MainApp] No user - showing SignInScreen');
     return <SignInScreen />;
   }
 
   // If user session exists but no complete database profile, create it
   const isDatabaseConfirmed = !!user.created_at;
   if (!isDatabaseConfirmed) {
-    console.log('[MainApp] User missing DB profile - showing ProfileCreationScreen');
     return <ProfileCreationScreen />;
   }
 
   // If user is not verified, show verification screens
   if (user && !user.verified) {
-    console.log(`[MainApp] User not verified - status: "${user.verification_status}", id_image_url: "${user.id_image_url}"`);
     
     if (user.verification_status === 'pending') {
       // Check if user has uploaded an ID
@@ -37,7 +34,6 @@ export default function MainApp() {
       
       if (hasUploadedId) {
         // Show pending screen
-        console.log('[MainApp] -> Showing VerificationPendingScreen');
         return <VerificationPendingScreen user={{
           nickname: user.nickname || 'User',
           verification_status: user.verification_status,
@@ -46,21 +42,17 @@ export default function MainApp() {
         }} />;
       } else {
         // Show verification upload screen
-        console.log('[MainApp] -> Showing VerificationScreen');
         return <VerificationScreen />;
       }
     } else if (user.verification_status === 'rejected') {
       // Show verification screen for rejected users
-      console.log('[MainApp] -> Showing VerificationScreen for rejected user');
       return <VerificationScreen />;
     } else {
       // Default case - show verification screen
-      console.log('[MainApp] -> Showing VerificationScreen default case');
       return <VerificationScreen />;
     }
   }
 
   // Show main HomeHub screen for verified users (no bottom tabs)
-  console.log('[MainApp] -> Showing HomeHubScreen for verified user');
   return <HomeHubScreen />;
 }

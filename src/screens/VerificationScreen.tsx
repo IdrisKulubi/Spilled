@@ -159,7 +159,6 @@ export const VerificationScreen: React.FC = () => {
 
   // SENIOR DEVELOPER FIX: Only show pending UI if user has actually uploaded an ID
   if (verificationStatus?.status === 'pending' && user?.id_image_url && user.id_image_url.trim() !== '') {
-    console.log('[VerificationScreen] -> Showing PENDING UI (ID uploaded and under review)');
     return (
       <SafeAreaView style={TeaKEStyles.safeContainer}>
         <View style={[TeaKEStyles.container, { justifyContent: 'center', alignItems: 'center' }]}>
@@ -177,7 +176,6 @@ export const VerificationScreen: React.FC = () => {
   }
 
   // If we reach here, show the upload UI (no ID uploaded yet or rejected)
-  console.log('[VerificationScreen] -> Showing UPLOAD UI (no ID uploaded or rejected)');
   
   return (
     <SafeAreaView style={TeaKEStyles.safeContainer}>

@@ -16,9 +16,7 @@ function AppStack({ fontLoaded }: { fontLoaded: boolean }) {
   // The condition to show the splash screen is now combined here
   const isLoading = authLoading || !fontLoaded;
 
-  console.log(
-    `[Layout] AppStack. Auth loading: ${authLoading}, Fonts loaded: ${fontLoaded}, isLoading: ${isLoading}`
-  );
+ 
 
   if (isLoading) {
     return <SplashScreen />;
@@ -80,7 +78,6 @@ export default function RootLayout() {
   // Add a timeout to prevent infinite loading due to font issues
   React.useEffect(() => {
     const timer = setTimeout(() => {
-      console.log('[Layout] Font loading timeout - proceeding without fonts');
       setFontTimeout(true);
     }, 2000); // 2 second timeout
 
@@ -91,7 +88,6 @@ export default function RootLayout() {
     return () => clearTimeout(timer);
   }, [fontLoaded, fontError]);
 
-  console.log('[Layout] Font loading status - loaded:', fontLoaded, 'error:', fontError, 'timeout:', fontTimeout);
 
   // If there's a font error, timeout, or fonts loaded, we'll proceed
   const fontsReady = fontLoaded || !!fontError || fontTimeout;

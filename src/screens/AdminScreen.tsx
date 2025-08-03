@@ -63,7 +63,6 @@ export const AdminScreen: React.FC = () => {
     if (!isAdmin) return;
 
     const subscription = subscribeToVerificationChanges((payload) => {
-      console.log('[AdminScreen] Verification status changed, refreshing data...');
       loadAdminData();
     });
 
@@ -74,7 +73,6 @@ export const AdminScreen: React.FC = () => {
 
   const loadAdminData = async () => {
     try {
-      console.log('[AdminScreen] Loading admin data...');
       
       // Debug storage files to help troubleshoot
       await debugStorageFiles();
@@ -86,14 +84,12 @@ export const AdminScreen: React.FC = () => {
 
       if (verificationResult.success) {
         setPendingUsers(verificationResult.data || []);
-        console.log(`[AdminScreen] Loaded ${verificationResult.data?.length || 0} pending verifications`);
       } else {
         Alert.alert('Error', verificationResult.error || 'Failed to load pending verifications');
       }
 
       if (statsResult.success) {
         setAdminStats(statsResult.data || null);
-        console.log('[AdminScreen] Loaded admin stats');
       }
 
     } catch (error) {

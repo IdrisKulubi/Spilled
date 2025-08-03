@@ -161,8 +161,7 @@ export const addPost = async (postData: CreatePostData): Promise<PostResponse> =
 // Helper function to upload image (if needed)
 export const uploadStoryImage = async (uri: string, storyId: string): Promise<string | null> => {
   try {
-    console.log('[StoryUpload] Starting image upload for story:', storyId);
-    console.log('[StoryUpload] Image URI:', uri);
+    
     
     // Use expo-file-system for reliable file reading
     let fileData: Uint8Array;
@@ -173,7 +172,6 @@ export const uploadStoryImage = async (uri: string, storyId: string): Promise<st
         encoding: FileSystem.EncodingType.Base64,
       });
       
-      console.log('[StoryUpload] File read as base64, length:', base64.length);
       
       if (base64.length === 0) {
         console.error('[StoryUpload] Image file is empty');
@@ -184,7 +182,6 @@ export const uploadStoryImage = async (uri: string, storyId: string): Promise<st
       // Convert base64 to buffer for Supabase
       const buffer = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
       
-      console.log('[StoryUpload] Converted to buffer, size:', buffer.length, 'bytes');
       fileData = buffer as any; // Supabase accepts Uint8Array
       
     } catch (fetchError) {
@@ -195,7 +192,6 @@ export const uploadStoryImage = async (uri: string, storyId: string): Promise<st
     const fileName = `story-${storyId}-${Date.now()}.jpg`;
     const filePath = `stories/${fileName}`;
 
-    console.log('[StoryUpload] Uploading to path:', filePath);
 
     const { data, error } = await supabase.storage
       .from('story-images')
@@ -209,14 +205,12 @@ export const uploadStoryImage = async (uri: string, storyId: string): Promise<st
       return null;
     }
 
-    console.log('[StoryUpload] Upload successful, path:', data.path);
 
     // Get public URL (story images can be public)
     const { data: { publicUrl } } = supabase.storage
       .from('story-images')
       .getPublicUrl(data.path);
 
-    console.log('[StoryUpload] Public URL generated:', publicUrl);
     return publicUrl;
   } catch (error) {
     console.error('[StoryUpload] Error uploading image:', error);

@@ -173,7 +173,6 @@ export const AddPostScreen: React.FC = () => {
 
       // Upload image first if one is selected
       if (imageUri) {
-        console.log("[AddPost] Uploading image...");
         // Create a temporary story ID for the upload
         const tempStoryId = `temp-${Date.now()}`;
         const uploadResult = await uploadStoryImage(imageUri, tempStoryId);
@@ -189,7 +188,6 @@ export const AddPostScreen: React.FC = () => {
           setIsSubmitting(false);
           return;
         }
-        console.log("[AddPost] Image uploaded successfully:", uploadedImageUrl);
       }
 
       const postData: CreatePostData = {
@@ -205,10 +203,7 @@ export const AddPostScreen: React.FC = () => {
         nickname: anonymous ? undefined : nickname.trim() || undefined,
       };
 
-      console.log("[AddPost] Creating post with data:", {
-        ...postData,
-        imageUrl: uploadedImageUrl ? "uploaded" : "none",
-      });
+      
       const response = await addPost(postData);
 
       if (response.success) {

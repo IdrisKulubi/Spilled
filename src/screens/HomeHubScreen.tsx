@@ -60,7 +60,6 @@ export const HomeHubScreen: React.FC = () => {
           }
         }
       } catch (error) {
-        console.log('Error loading last tab:', error);
       }
     };
 
@@ -73,7 +72,8 @@ export const HomeHubScreen: React.FC = () => {
       try {
         await AsyncStorage.setItem(LAST_TAB_STORAGE_KEY, routes[index].key);
       } catch (error) {
-        console.log('Error saving last tab:', error);
+
+        console.error('Error saving last tab:', error);
       }
     };
 
