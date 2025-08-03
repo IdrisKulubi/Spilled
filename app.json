@@ -1,11 +1,11 @@
 {
   "expo": {
     "name": "Spilled",
-    "slug": "teake",
+    "slug": "spilled",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/spilled-icon.png",
-    "scheme": "teake",
+    "scheme": "spilled",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {

@@ -23,7 +23,7 @@ import { StoryActionsModal } from './modals/StoryActionsModal';
 import { DeleteConfirmationModal } from './modals/DeleteConfirmationModal';
 import { EditStoryModal } from './modals/EditStoryModal';
 import { 
-  softDeleteStory, 
+  deleteStory, 
   updateStory, 
   checkStoryOwnership,
   UpdateStoryData 
@@ -191,7 +191,7 @@ export const StoryCard: React.FC<StoryCardProps> = ({
 
     setIsDeleting(true);
     try {
-      const response = await softDeleteStory(story.id, user.id);
+      const response = await deleteStory(story.id, user.id);
       
       if (response.success) {
         setDeleteModalVisible(false);

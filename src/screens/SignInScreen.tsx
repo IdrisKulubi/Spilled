@@ -47,7 +47,7 @@ export const SignInScreen: React.FC = () => {
         {/* Header Section */}
         <View style={styles.headerSection}>
           <View style={styles.logoContainer}>
-            <Text style={styles.logoText}>TeaKE</Text>
+            <Text style={styles.logoText}>Spilled</Text>
             <Text style={styles.logoEmoji}>☕️</Text>
           </View>
 

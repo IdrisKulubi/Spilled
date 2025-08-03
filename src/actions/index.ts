@@ -1,5 +1,5 @@
 /**
- * TeaKE Actions
+ * Spilled Actions
  * Export all database actions
  */
 
@@ -32,7 +32,7 @@ export type {
 } from './sendMessage';
 
 export { 
-  softDeleteStory, 
+  deleteStory, 
   updateStory, 
   deleteComment, 
   checkStoryOwnership, 

@@ -1,5 +1,5 @@
 /**
- * Modern Splash Screen for TeaKE
+ * Modern Splash Screen for Spilled
  * Shows while app loads and authenticates user
  */
 
@@ -86,7 +86,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
         </View>
         
         {/* App Name */}
-        <Text style={styles.appName}>TeaKE</Text>
+        <Text style={styles.appName}>Spilled</Text>
         <Text style={styles.tagline}>Is He Seeing Others?</Text>
       </Animated.View>
 

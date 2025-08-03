@@ -20,8 +20,8 @@ export interface UpdateStoryData {
   nickname?: string;
 }
 
-// Soft delete story (hide from public view)
-export const softDeleteStory = async (storyId: string, userId: string) => {
+// Delete story (hard delete)
+export const deleteStory = async (storyId: string, userId: string) => {
   try {
     // First verify the user owns this story
     const { data: story, error: fetchError } = await supabase
@@ -42,18 +42,15 @@ export const softDeleteStory = async (storyId: string, userId: string) => {
       };
     }
 
-    // Soft delete: Set hidden flag instead of actual deletion
-    const { error: updateError } = await (supabase as any)
+    // Hard delete the story (this will also cascade delete comments due to foreign key)
+    const { error: deleteError } = await supabase
       .from("stories")
-      .update({
-        hidden: true,
-        updated_at: new Date().toISOString(),
-      })
+      .delete()
       .eq("id", storyId)
       .eq("user_id", userId); // Double-check ownership
 
-    if (updateError) {
-      console.error("Error soft deleting story:", updateError);
+    if (deleteError) {
+      console.error("Error deleting story:", deleteError);
       return {
         success: false,
         error: "Failed to delete story. Please try again.",
@@ -62,7 +59,7 @@ export const softDeleteStory = async (storyId: string, userId: string) => {
 
     return { success: true };
   } catch (error) {
-    console.error("Soft delete story error:", error);
+    console.error("Delete story error:", error);
     return { success: false, error: "Something went wrong bestie! 😭" };
   }
 };

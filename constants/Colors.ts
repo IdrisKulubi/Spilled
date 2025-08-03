@@ -1,5 +1,5 @@
 /**
- * TeaKE App Color Scheme
+ * Spilled App Color Scheme
  * A carefully crafted palette designed for trust, femininity, and community safety
  */
 
