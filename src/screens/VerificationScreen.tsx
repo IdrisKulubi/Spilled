@@ -193,7 +193,7 @@ export const VerificationScreen: React.FC = () => {
           
           <Text style={TeaKEStyles.heading1}>Verify Your Identity</Text>
           <Text style={TeaKEStyles.body}>
-            To keep TeaKE safe for women, we need to verify your identity. 
+            To keep Spilled safe for women, we need to verify your identity. 
             Please upload a photo of your school ID or national ID.
           </Text>
 

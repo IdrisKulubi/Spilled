@@ -12,7 +12,7 @@
       "supportsTablet": true
     },
     "android": {
-      "package": "com.spilled.app",
+      "package": "com.vehem23.spilled",
       "versionCode": 1,
       "compileSdkVersion": 34,
       "targetSdkVersion": 34,
@@ -48,13 +48,15 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "e5976057-cc53-492e-b8b7-d791a04c4540"
-      }
+        "projectId": "11037155-becf-4539-add3-526032ad9af2"
+      },
+      "router": {}
     },
     "privacy": "public",
     "description": "Spilled - A platform for women to share experiences and stay safe by warning others about concerning behavior from men they've encountered.",
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "owner": "vehem23"
   }
 }
