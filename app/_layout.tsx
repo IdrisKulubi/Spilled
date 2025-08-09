@@ -8,6 +8,7 @@ import 'react-native-reanimated';
 import { useColorScheme } from '../hooks/useColorScheme';
 import { AuthProvider, useAuth } from '../src/contexts/AuthContext';
 import { SplashScreen } from '../components/SplashScreen';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 
 // This component now receives fontLoaded as a prop
 function AppStack({ fontLoaded }: { fontLoaded: boolean }) {
@@ -93,13 +94,15 @@ export default function RootLayout() {
   const fontsReady = fontLoaded || !!fontError || fontTimeout;
 
   return (
-    <AuthProvider>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        {/* The fontLoaded status is passed down as a prop */}
-        <AppStack fontLoaded={fontsReady} />
-        <StatusBar style="auto" />
-      </ThemeProvider>
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+          {/* The fontLoaded status is passed down as a prop */}
+          <AppStack fontLoaded={fontsReady} />
+          <StatusBar style="auto" />
+        </ThemeProvider>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
 

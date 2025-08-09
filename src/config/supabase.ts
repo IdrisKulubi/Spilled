@@ -37,6 +37,19 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     // Use SecureStore for session persistence
     storage: ExpoSecureStoreAdapter,
   },
+  global: {
+    headers: {
+      'X-Client-Info': 'spilled-app',
+    },
+  },
+  db: {
+    schema: 'public',
+  },
+  realtime: {
+    params: {
+      eventsPerSecond: 2,
+    },
+  },
 });
 
 // Helper function to check if Supabase is properly configured

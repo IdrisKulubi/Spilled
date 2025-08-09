@@ -2,7 +2,7 @@
   "expo": {
     "name": "Spilled",
     "slug": "spilled",
-    "version": "1.0.1",
+    "version": "1.2.3",
     "orientation": "portrait",
     "icon": "./assets/images/spilled-icon.png",
     "scheme": "spilled",
@@ -13,7 +13,7 @@
     },
     "android": {
       "package": "com.vehem23.spilled",
-      "versionCode": 2,
+      "versionCode": 3,
       "compileSdkVersion": 34,
       "targetSdkVersion": 34,
       "adaptiveIcon": {
