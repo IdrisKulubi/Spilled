@@ -20,9 +20,15 @@ const ExpoSecureStoreAdapter = {
   },
 };
 
-// TODO: Replace with your actual Supabase project URL and anon key
+// Supabase configuration
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || 'YOUR_SUPABASE_URL';
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'YOUR_SUPABASE_ANON_KEY';
+
+// Debug logging (remove in production)
+if (__DEV__) {
+  console.log('Supabase URL:', supabaseUrl);
+  console.log('Supabase Key exists:', !!supabaseAnonKey);
+}
 
 // Admin configuration
 export const ADMIN_EMAIL = process.env.EXPO_PUBLIC_ADMIN_EMAIL || 'kulubiidris@gmail.com';
@@ -30,27 +36,10 @@ export const ADMIN_EMAIL = process.env.EXPO_PUBLIC_ADMIN_EMAIL || 'kulubiidris@g
 
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
-    // Enable automatic session refresh
     autoRefreshToken: true,
     persistSession: true,
-    // In React Native/Expo, Supabase cannot parse exp:// URLs.
-    // We manually exchange the auth code for a session.
     detectSessionInUrl: false,
-    // Use SecureStore for session persistence
     storage: ExpoSecureStoreAdapter,
-  },
-  global: {
-    headers: {
-      'X-Client-Info': 'spilled-app',
-    },
-  },
-  db: {
-    schema: 'public',
-  },
-  realtime: {
-    params: {
-      eventsPerSecond: 2,
-    },
   },
 });
 

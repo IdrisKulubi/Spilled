@@ -13,6 +13,14 @@ import { ProfileCreationScreen } from '../src/screens/ProfileCreationScreen';
 
 export default function MainApp() {
   const { user, loading } = useAuth();
+  
+  // Debug environment variables
+  React.useEffect(() => {
+    console.log('🔍 Environment Variables Debug:');
+    console.log('SUPABASE_URL:', process.env.EXPO_PUBLIC_SUPABASE_URL);
+    console.log('SUPABASE_KEY exists:', !!process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY);
+    console.log('DEV_MODE:', process.env.EXPO_PUBLIC_DEV_MODE);
+  }, []);
 
   // If not logged in, show sign in screen
   if (!user) {

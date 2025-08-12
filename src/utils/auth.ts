@@ -98,6 +98,7 @@ export const authUtils = {
         }
       );
 
+      console.log("[Auth] WebBrowser.openAuthSessionAsync result:", result);
       if (result.type === "success") {
         const redirectResultUrl = (result as any)?.url?.trim?.() || "";
         if (!redirectResultUrl) {
