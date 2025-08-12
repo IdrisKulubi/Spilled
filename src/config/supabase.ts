@@ -33,7 +33,7 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     // Enable automatic session refresh
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: false,
+    detectSessionInUrl: true,
     // Use SecureStore for session persistence
     storage: ExpoSecureStoreAdapter,
   },

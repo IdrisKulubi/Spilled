@@ -53,7 +53,7 @@ export const authUtils = {
       WebBrowser.maybeCompleteAuthSession();
 
       const redirectUrl = AuthSession.makeRedirectUri({
-        scheme: Platform.OS === "web" ? undefined : "teake",
+        scheme: Platform.OS === "web" ? undefined : "spilled",
         path: Platform.OS !== "web" ? "redirect" : undefined,
       });
 
@@ -100,80 +100,40 @@ export const authUtils = {
         );
 
         if (result.type === "success") {
-          // Handle the OAuth callback URL to establish session
-          if (result.url) {
-            // Extract tokens from the callback URL and establish session
+          // The redirect was successful, session should be automatically handled by Supabase
+          // Wait a moment for the session to be established
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+
+          // Check if we have a valid session
+          const {
+            data: { user },
+            error: userError,
+          } = await supabase.auth.getUser();
+
+          if (user && !userError) {
+            // Create user profile if needed
             try {
-              const url = new URL(result.url);
-              const fragment = url.hash.substring(1);
-              const params = new URLSearchParams(fragment);
+              const userProfile = await authUtils.ensureUserProfile(
+                user.id,
+                user.user_metadata?.full_name || user.email?.split("@")[0],
+                undefined, // phone - not available from Google OAuth
+                user.email
+              );
 
-              const accessToken = params.get("access_token");
-              const refreshToken = params.get("refresh_token");
-
-              if (accessToken && refreshToken) {
-                // Manually set the session using the tokens
-                const { error } = await supabase.auth.setSession({
-                  access_token: accessToken,
-                  refresh_token: refreshToken,
-                });
-
-                if (!error) {
-                  return {
-                    success: true,
-                    user: undefined, // User will be set by AuthContext after profile is created
-                  };
-                }
-              }
-            } catch (exchangeError) {
-              // Continue to session establishment fallback
+              return {
+                success: true,
+                user: userProfile,
+              };
+            } catch (profileError) {
+              return {
+                success: false,
+                error: "Failed to create user profile",
+              };
             }
-          }
-
-          // Wait for session to be established
-          let attempts = 0;
-          const maxAttempts = 10;
-          let user = null;
-
-          while (attempts < maxAttempts && !user) {
-            attempts++;
-            await new Promise((resolve) => setTimeout(resolve, 500));
-
-            const {
-              data: { user: currentUser },
-              error: userError,
-            } = await supabase.auth.getUser();
-
-            if (currentUser && !userError) {
-              user = currentUser;
-              break;
-            }
-          }
-
-          if (!user) {
+          } else {
             return {
               success: false,
               error: "Failed to establish user session after OAuth",
-            };
-          }
-
-          // Create user profile
-          try {
-            const userProfile = await authUtils.ensureUserProfile(
-              user.id,
-              user.user_metadata?.full_name || user.email?.split("@")[0],
-              undefined, // phone - not available from Google OAuth
-              user.email
-            );
-
-            return {
-              success: true,
-              user: userProfile,
-            };
-          } catch (profileError) {
-            return {
-              success: false,
-              error: "Failed to create user profile",
             };
           }
         }
