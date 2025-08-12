@@ -55,7 +55,7 @@ export const authUtils = {
       const redirectUrl = AuthSession.makeRedirectUri({
         scheme: Platform.OS === "web" ? undefined : "spilled",
         path: Platform.OS !== "web" ? "redirect" : undefined,
-      });
+      }).trim(); // Trim any potential whitespace
 
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
@@ -90,64 +90,86 @@ export const authUtils = {
       }
 
       // For mobile, we need to open the URL
-      if (data.url) {
-        const result = await WebBrowser.openAuthSessionAsync(
-          data.url,
-          redirectUrl,
-          {
-            showInRecents: true,
-          }
-        );
+      const result = await WebBrowser.openAuthSessionAsync(
+        data.url,
+        redirectUrl,
+        {
+          showInRecents: true,
+        }
+      );
 
-        if (result.type === "success") {
-          // The redirect was successful, session should be automatically handled by Supabase
-          // Wait a moment for the session to be established
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-
-          // Check if we have a valid session
-          const {
-            data: { user },
-            error: userError,
-          } = await supabase.auth.getUser();
-
-          if (user && !userError) {
-            // Create user profile if needed
-            try {
-              const userProfile = await authUtils.ensureUserProfile(
-                user.id,
-                user.user_metadata?.full_name || user.email?.split("@")[0],
-                undefined, // phone - not available from Google OAuth
-                user.email
-              );
-
-              return {
-                success: true,
-                user: userProfile,
-              };
-            } catch (profileError) {
-              return {
-                success: false,
-                error: "Failed to create user profile",
-              };
-            }
-          } else {
-            return {
-              success: false,
-              error: "Failed to establish user session after OAuth",
-            };
-          }
+      if (result.type === "success") {
+        const redirectResultUrl = (result as any)?.url?.trim?.() || "";
+        if (!redirectResultUrl) {
+          return { success: false, error: "No redirect URL received" };
         }
 
-        return {
-          success: false,
-          error: "Authentication was cancelled or failed",
-        };
+        let accessToken: string | null = null;
+        let refreshToken: string | null = null;
+
+        try {
+          const parsedUrl = new URL(redirectResultUrl);
+          const hashParams = new URLSearchParams(parsedUrl.hash.replace(/^#/, ""));
+          accessToken = hashParams.get("access_token");
+          refreshToken = hashParams.get("refresh_token");
+        } catch (parseError) {
+        }
+
+        if (!accessToken || !refreshToken) {
+          return {
+            success: false,
+            error: "Failed to retrieve authentication tokens",
+          };
+        }
+
+        const { error: sessionError } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+
+        if (sessionError) {
+          return {
+            success: false,
+            error: "Failed to establish user session with tokens",
+          };
+        }
       }
 
-      return {
-        success: false,
-        error: "Failed to initialize Google authentication",
-      };
+      // Wait a moment for the session to be established
+      await new Promise((resolve) => setTimeout(resolve, 3000)); // Increased timeout to 3 seconds
+
+      // Check if we have a valid session
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (user && !userError) {
+        // Create user profile if needed
+        try {
+          const userProfile = await authUtils.ensureUserProfile(
+            user.id,
+            user.user_metadata?.full_name || user.email?.split("@")[0],
+            undefined, // phone - not available from Google OAuth
+            user.email
+          );
+
+          return {
+            success: true,
+            user: userProfile,
+          };
+        } catch (profileError) {
+          return {
+            success: false,
+            error: "Failed to create user profile",
+          };
+        }
+      } else {
+        return {
+          success: false,
+          error: "Failed to establish user session after OAuth",
+        };
+      }
     } catch (error) {
       return {
         success: false,

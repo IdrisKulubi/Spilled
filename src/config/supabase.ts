@@ -33,7 +33,9 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     // Enable automatic session refresh
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: true,
+    // In React Native/Expo, Supabase cannot parse exp:// URLs.
+    // We manually exchange the auth code for a session.
+    detectSessionInUrl: false,
     // Use SecureStore for session persistence
     storage: ExpoSecureStoreAdapter,
   },

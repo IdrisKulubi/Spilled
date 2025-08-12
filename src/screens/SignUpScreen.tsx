@@ -31,7 +31,7 @@ export const SignUpScreen: React.FC = () => {
         // Navigation will be handled by AuthContext state change
       } else {
         Alert.alert(
-          "Oops! Something went wrong 😅",
+          "Oops! Something went wrong ",
           result.error || "Failed to create account with Google"
         );
       }
