@@ -52,10 +52,14 @@ export const authUtils = {
       // Configure WebBrowser for OAuth
       WebBrowser.maybeCompleteAuthSession();
 
-      const redirectUrl = AuthSession.makeRedirectUri({
-        scheme: Platform.OS === "web" ? undefined : "spilled",
-        path: Platform.OS !== "web" ? "redirect" : undefined,
-      }).trim(); // Trim any potential whitespace
+      const redirectUrl =
+        Platform.OS === "web"
+          ? AuthSession.makeRedirectUri({})
+          : AuthSession.makeRedirectUri({
+              scheme:
+                Platform.OS === "android" ? "com.vehem23.spilled" : "spilled",
+              path: "redirect",
+            });
 
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
@@ -98,7 +102,9 @@ export const authUtils = {
         }
       );
 
+      console.log("[Auth] OAuth redirect URL:", redirectUrl);
       console.log("[Auth] WebBrowser.openAuthSessionAsync result:", result);
+
       if (result.type === "success") {
         const redirectResultUrl = (result as any)?.url?.trim?.() || "";
         if (!redirectResultUrl) {
@@ -110,11 +116,12 @@ export const authUtils = {
 
         try {
           const parsedUrl = new URL(redirectResultUrl);
-          const hashParams = new URLSearchParams(parsedUrl.hash.replace(/^#/, ""));
+          const hashParams = new URLSearchParams(
+            parsedUrl.hash.replace(/^#/, "")
+          );
           accessToken = hashParams.get("access_token");
           refreshToken = hashParams.get("refresh_token");
-        } catch (parseError) {
-        }
+        } catch (parseError) {}
 
         if (!accessToken || !refreshToken) {
           return {
