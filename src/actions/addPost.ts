@@ -1,14 +1,16 @@
 /**
  * Add Post Action - Spilled
  * Handles creating new posts/stories about guys
+ * Updated to use Drizzle repositories instead of Supabase
  */
 
-import { supabase, handleSupabaseError } from '../config/supabase';
 import { authUtils } from '../utils/auth';
-import { Database } from '../types/database';
+import { StoryRepository } from '../repositories/StoryRepository';
+import { GuyRepository } from '../repositories/GuyRepository';
+import { or, ilike } from 'drizzle-orm';
 import * as FileSystem from 'expo-file-system';
 
-type TagType = Database['public']['Enums']['tag_type'];
+type TagType = "red_flag" | "good_vibes" | "unsure";
 
 export interface CreatePostData {
   guyName?: string;
@@ -30,6 +32,10 @@ export interface PostResponse {
   error?: string;
 }
 
+// Initialize repositories
+const storyRepository = new StoryRepository();
+const guyRepository = new GuyRepository();
+
 export const addPost = async (postData: CreatePostData): Promise<PostResponse> => {
   try {
     // Get authenticated user
@@ -42,10 +48,10 @@ export const addPost = async (postData: CreatePostData): Promise<PostResponse> =
     }
 
     // Check if user is verified
-    if (currentUser.verification_status !== 'approved') {
-      const statusMessage = currentUser.verification_status === 'pending' 
+    if (currentUser.verificationStatus !== 'approved') {
+      const statusMessage = currentUser.verificationStatus === 'pending' 
         ? 'Your verification is still pending. Please wait for approval.'
-        : currentUser.verification_status === 'rejected'
+        : currentUser.verificationStatus === 'rejected'
         ? 'Your verification was rejected. Please re-upload your ID.'
         : 'Please verify your identity by uploading your ID to post stories.';
       
@@ -87,68 +93,63 @@ export const addPost = async (postData: CreatePostData): Promise<PostResponse> =
     // Step 1: Find or create guy profile
     let guyId: string;
     
-    // First, try to find existing guy
-    const { data: existingGuy, error: searchError } = await supabase
-      .from('guys')
-      .select('id')
-      .or(`name.ilike.%${postData.guyName || ''}%,phone.eq.${formattedPhone || ''},socials.ilike.%${postData.guySocials || ''}%`)
-      .limit(1)
-      .single();
+    // First, try to find existing guy using search functionality
+    if (postData.guyName || formattedPhone || postData.guySocials) {
+      const searchTerm = postData.guyName || formattedPhone || postData.guySocials || '';
+      const searchResults = await guyRepository.searchGuys(searchTerm, { limit: 1 });
+      
+      if (searchResults.data.length > 0) {
+        guyId = searchResults.data[0].id;
+      } else {
+        // Create new guy profile
+        try {
+          const newGuy = await guyRepository.create({
+            name: postData.guyName || null,
+            phone: formattedPhone || null,
+            socials: postData.guySocials || null,
+            location: postData.guyLocation || null,
+            age: postData.guyAge || null,
+            createdByUserId: currentUser.id,
+          });
 
-    if (existingGuy && !searchError) {
-      guyId = existingGuy.id;
-    } else {
-      // Create new guy profile
-      const { data: newGuy, error: createGuyError } = await supabase
-        .from('guys')
-        .insert({
-          name: postData.guyName,
-          phone: formattedPhone,
-          socials: postData.guySocials,
-          location: postData.guyLocation,
-          age: postData.guyAge,
-          created_by_user_id: currentUser.id,
-        })
-        .select('id')
-        .single();
-
-      if (createGuyError || !newGuy) {
-        return {
-          success: false,
-          error: handleSupabaseError(createGuyError)
-        };
+          guyId = newGuy.id;
+        } catch (error) {
+          return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Failed to create guy profile'
+          };
+        }
       }
-
-      guyId = newGuy.id;
-    }
-
-    // Step 2: Create story entry
-    const { data: newStory, error: createStoryError } = await supabase
-      .from('stories')
-      .insert({
-        guy_id: guyId,
-        user_id: currentUser.id,
-        text: postData.storyText.trim(),
-        tags: postData.tags,
-        image_url: postData.imageUrl,
-        anonymous: postData.anonymous,
-        nickname: postData.anonymous ? null : (postData.nickname || currentUser.nickname),
-      })
-      .select('id')
-      .single();
-
-    if (createStoryError || !newStory) {
+    } else {
       return {
         success: false,
-        error: handleSupabaseError(createStoryError)
+        error: 'Please provide at least the guy\'s name, phone, or social handle'
       };
     }
 
-    return {
-      success: true,
-      postId: newStory.id,
-      guyId: guyId,
-    };
+    // Step 2: Create story entry
+    try {
+      const newStory = await storyRepository.create({
+        guyId: guyId,
+        userId: currentUser.id,
+        text: postData.storyText.trim(),
+        tags: postData.tags,
+        imageUrl: postData.imageUrl || null,
+        anonymous: postData.anonymous,
+        nickname: postData.anonymous ? null : (postData.nickname || currentUser.nickname),
+      });
+
+      return {
+        success: true,
+        postId: newStory.id,
+        guyId: guyId,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to create story'
+      };
+    }
   } catch (error) {
     console.error('Error creating post:', error);
     return {
@@ -158,60 +159,17 @@ export const addPost = async (postData: CreatePostData): Promise<PostResponse> =
   }
 };
 
-// Helper function to upload image (if needed)
+// Helper function to upload image (placeholder for new file storage)
 export const uploadStoryImage = async (uri: string, storyId: string): Promise<string | null> => {
   try {
+    // TODO: Implement file upload with Cloudinary or alternative storage
+    // This is a placeholder implementation for the migration
+    console.warn('[StoryUpload] File storage migration not yet implemented');
+    console.log('[StoryUpload] Would upload image:', { uri, storyId });
     
-    
-    // Use expo-file-system for reliable file reading
-    let fileData: Uint8Array;
-    
-    try {
-      // Read file as base64
-      const base64 = await FileSystem.readAsStringAsync(uri, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
-      
-      
-      if (base64.length === 0) {
-        console.error('[StoryUpload] Image file is empty');
-        return null;
-      }
-      
-      // For React Native, we can upload the base64 string directly
-      // Convert base64 to buffer for Supabase
-      const buffer = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
-      
-      fileData = buffer as any; // Supabase accepts Uint8Array
-      
-    } catch (fetchError) {
-      console.error('[StoryUpload] Error reading image file:', fetchError);
-      return null;
-    }
-    
-    const fileName = `story-${storyId}-${Date.now()}.jpg`;
-    const filePath = `stories/${fileName}`;
-
-
-    const { data, error } = await supabase.storage
-      .from('story-images')
-      .upload(filePath, fileData, {
-        contentType: 'image/jpeg',
-        upsert: false
-      });
-
-    if (error) {
-      console.error('[StoryUpload] Upload error:', error);
-      return null;
-    }
-
-
-    // Get public URL (story images can be public)
-    const { data: { publicUrl } } = supabase.storage
-      .from('story-images')
-      .getPublicUrl(data.path);
-
-    return publicUrl;
+    // For now, return null to indicate upload is not yet implemented
+    // Once file storage is migrated (task 7), this function will be updated
+    return null;
   } catch (error) {
     console.error('[StoryUpload] Error uploading image:', error);
     return null;

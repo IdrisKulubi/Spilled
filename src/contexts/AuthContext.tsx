@@ -4,8 +4,20 @@
  */
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { authUtils, User } from '../utils/auth';
-import { isUserAdmin } from '../config/supabase';
+import { authClient } from '../lib/auth-client';
+import type { Session } from '../lib/auth-client';
+import type { User as BetterAuthUser } from '../lib/auth-client';
+import { UserRepository } from '../repositories/UserRepository';
+import type { User } from '../database/schema';
+
+// Admin configuration
+const ADMIN_EMAIL = process.env.EXPO_PUBLIC_ADMIN_EMAIL || 'kulubiidris@gmail.com';
+
+// Helper function to check if user is admin
+const isUserAdmin = (userEmail?: string): boolean => {
+  if (!userEmail) return false;
+  return userEmail.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+};
 
 interface AuthContextType {
   user: User | null;
@@ -42,23 +54,57 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const userRepository = new UserRepository();
+
+  // Helper function to get database user from Better Auth user
+  const getDatabaseUser = async (betterAuthUser: BetterAuthUser): Promise<User | null> => {
+    try {
+      let dbUser = await userRepository.findById(betterAuthUser.id);
+      
+      if (!dbUser) {
+        // Create user profile if it doesn't exist
+        dbUser = await userRepository.create({
+          id: betterAuthUser.id,
+          email: betterAuthUser.email || null,
+          nickname: betterAuthUser.nickname || betterAuthUser.name || betterAuthUser.email?.split('@')[0] || 'User',
+          phone: betterAuthUser.phone || null,
+          verified: false,
+          verificationStatus: 'pending',
+          createdAt: new Date(),
+        });
+      }
+      
+      return dbUser;
+    } catch (error) {
+      console.error('Error getting database user:', error);
+      return null;
+    }
+  };
 
   useEffect(() => {
     // Check for existing session on app start
     const checkUser = async () => {
       try {
-        const currentUser = await authUtils.getCurrentUser();
-        setUser(currentUser);
-        
-        // Check if user is admin
-        if (currentUser?.email) {
-          const adminStatus = isUserAdmin(currentUser.email);
-          setIsAdmin(adminStatus);
+        const sessionResult = await authClient.getSession();
+        if (sessionResult.data?.user) {
+          const dbUser = await getDatabaseUser(sessionResult.data.user);
+          setUser(dbUser);
+          
+          // Check if user is admin
+          if (sessionResult.data.user.email) {
+            const adminStatus = isUserAdmin(sessionResult.data.user.email);
+            setIsAdmin(adminStatus);
+          } else {
+            setIsAdmin(false);
+          }
         } else {
+          setUser(null);
           setIsAdmin(false);
         }
       } catch (error) {
         console.error('Error checking user:', error);
+        setUser(null);
+        setIsAdmin(false);
       } finally {
         setLoading(false);
       }
@@ -66,58 +112,56 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     checkUser();
 
-    // Listen for auth state changes
-    const { data: { subscription } } = authUtils.onAuthStateChange(async (event, session) => {
-      
-      if (event === 'SIGNED_IN' && session?.user) {
-        // Set user to a *provisional* object first.
-        // It's missing `created_at`, which we use to detect a real DB profile.
-        setUser({
-          id: session.user.id,
-          email: session.user.email,
-          nickname: session.user.user_metadata?.full_name || 'User',
-          phone: null,
-          verified: false,
-          verification_status: 'pending',
-          id_image_url: null,
-          id_type: null,
-          rejection_reason: null,
-          verified_at: null,
-        } as any);
-        
-        // Check admin status for provisional user
-        if (session.user.email) {
-          const adminStatus = isUserAdmin(session.user.email);
-          setIsAdmin(adminStatus);
-        } else {
-          setIsAdmin(false);
-        }
-        
-        setLoading(false);
-      } else if (event === 'SIGNED_OUT') {
-        setUser(null);
-        setIsAdmin(false);
-        setLoading(false);
-      } else {
-        // For any other auth events, ensure loading is false
-        setLoading(false);
-      }
-    });
-
-    return () => {
-      subscription?.unsubscribe();
-    };
+    // Better Auth doesn't have onSessionChange, so we'll use a different approach
+    // For now, we'll rely on the initial check and manual updates
+    // TODO: Implement proper session change listening when Better Auth supports it
   }, []);
 
   const signInWithGoogle = async () => {
     setLoading(true);
     try {
-      const result = await authUtils.signInWithGoogle();
-      // Don't set user here - let onAuthStateChange handle it to prevent race conditions
-      return { success: result.success, error: result.error, user: result.user };
+      const result = await authClient.signIn.social({
+        provider: "google",
+        callbackURL: "/", // Redirect to home after sign in
+      });
+
+      if (result.error) {
+        setLoading(false);
+        return {
+          success: false,
+          error: result.error.message || 'Google sign-in failed',
+        };
+      }
+
+      // Check if we have a user in the response
+      if (result.data && 'user' in result.data && result.data.user) {
+        const dbUser = await getDatabaseUser(result.data.user);
+        setUser(dbUser);
+        
+        // Check admin status
+        if (result.data.user.email) {
+          const adminStatus = isUserAdmin(result.data.user.email);
+          setIsAdmin(adminStatus);
+        }
+        
+        setLoading(false);
+        return {
+          success: true,
+          user: dbUser,
+        };
+      }
+
+      // If no user in response, it might be a redirect flow
+      setLoading(false);
+      return {
+        success: true,
+      };
     } catch (error) {
       setLoading(false);
-      throw error;
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Google sign-in failed',
+      };
     }
   };
 
@@ -125,11 +169,63 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const signUp = async (email: string, password: string, nickname?: string, phone?: string) => {
     setLoading(true);
     try {
-      const result = await authUtils.signUp(email, password, nickname, phone);
-      if (result.success && result.user) {
-        setUser(result.user);
+      // Validate email
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return {
+          success: false,
+          error: "Please enter a valid email address",
+        };
       }
-      return { success: result.success, error: result.error, user: result.user };
+
+      const result = await authClient.signUp.email({
+        email,
+        password,
+        name: nickname || email.split('@')[0],
+        callbackURL: "/",
+      });
+
+      if (result.error) {
+        return {
+          success: false,
+          error: result.error.message || 'Sign up failed',
+        };
+      }
+
+      // Check if we have a user in the response
+      if (result.data && 'user' in result.data && result.data.user) {
+        const dbUser = await getDatabaseUser(result.data.user);
+        
+        // Update user profile with additional fields if provided
+        if (nickname || phone) {
+          try {
+            const updatedUser = await userRepository.update(result.data.user.id, {
+              nickname: nickname || null,
+              phone: phone || null,
+            });
+            setUser(updatedUser);
+          } catch (updateError) {
+            console.warn('Failed to update user profile after signup:', updateError);
+            setUser(dbUser);
+          }
+        } else {
+          setUser(dbUser);
+        }
+
+        return {
+          success: true,
+          user: dbUser,
+        };
+      }
+
+      return {
+        success: true,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Sign up failed',
+      };
     } finally {
       setLoading(false);
     }
@@ -138,11 +234,38 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const signIn = async (email: string, password: string) => {
     setLoading(true);
     try {
-      const result = await authUtils.signIn(email, password);
-      if (result.success && result.user) {
-        setUser(result.user);
+      const result = await authClient.signIn.email({
+        email,
+        password,
+        callbackURL: "/",
+      });
+
+      if (result.error) {
+        return {
+          success: false,
+          error: result.error.message || 'Sign in failed',
+        };
       }
-      return { success: result.success, error: result.error, user: result.user };
+
+      // Check if we have a user in the response
+      if (result.data && 'user' in result.data && result.data.user) {
+        const dbUser = await getDatabaseUser(result.data.user);
+        setUser(dbUser);
+        
+        return {
+          success: true,
+          user: dbUser,
+        };
+      }
+
+      return {
+        success: true,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Sign in failed',
+      };
     } finally {
       setLoading(false);
     }
@@ -151,11 +274,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const signOut = async () => {
     setLoading(true);
     try {
-      const result = await authUtils.signOut();
-      if (result.success) {
-        setUser(null);
+      const result = await authClient.signOut({
+        fetchOptions: {
+          onSuccess: () => {
+            setUser(null);
+            setIsAdmin(false);
+          },
+        },
+      });
+
+      if (result.error) {
+        return {
+          success: false,
+          error: result.error.message || 'Sign out failed',
+        };
       }
-      return result;
+
+      return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Sign out failed',
+      };
     } finally {
       setLoading(false);
     }
@@ -163,38 +303,77 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const updateProfile = async (updates: Partial<User>) => {
     try {
-      const result = await authUtils.updateProfile(updates);
-      if (result.success && result.user) {
-        setUser(result.user);
+      if (!user) {
+        return { success: false, error: 'No authenticated user found' };
       }
-      return { success: result.success, error: result.error };
+
+      // Update user profile in database using repository
+      const updatedUser = await userRepository.update(user.id, updates);
+      
+      if (updatedUser) {
+        setUser(updatedUser);
+        return { success: true };
+      } else {
+        return { success: false, error: 'Failed to update profile' };
+      }
     } catch (error) {
-      return { success: false, error: 'Failed to update profile' };
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Failed to update profile' 
+      };
     }
   };
 
   const uploadVerificationImage = async (imageUri: string, idType: 'school_id' | 'national_id') => {
     try {
-      const result = await authUtils.uploadVerificationImage(imageUri, idType);
-      // Refresh user data after upload
-      if (result.success) {
-        const updatedUser = await authUtils.getCurrentUser();
-        if (updatedUser) {
-          setUser(updatedUser);
-        }
+      if (!user) {
+        return { success: false, error: 'You must be logged in to upload verification' };
       }
-      return { success: result.success, error: result.error };
+
+      // TODO: Implement file upload with Cloudinary or alternative storage
+      // For now, return a placeholder implementation
+      console.warn('uploadVerificationImage: File storage migration not yet implemented');
+      
+      // Update user profile with verification status
+      const updatedUser = await userRepository.update(user.id, {
+        idType: idType,
+        verificationStatus: 'pending',
+        // idImageUrl will be set once file storage is implemented
+      });
+
+      if (updatedUser) {
+        setUser(updatedUser);
+        return { success: true };
+      } else {
+        return { success: false, error: 'Failed to update verification status' };
+      }
     } catch (error) {
-      return { success: false, error: 'Failed to upload verification image' };
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Failed to upload verification image' 
+      };
     }
   };
 
   const getVerificationStatus = async () => {
-    return await authUtils.getVerificationStatus();
+    try {
+      if (!user) return null;
+
+      return {
+        status: (user.verificationStatus as 'pending' | 'approved' | 'rejected') || 'pending',
+        reason: user.rejectionReason || undefined,
+      };
+    } catch (error) {
+      return null;
+    }
   };
 
   const canUserPost = async () => {
-    return await authUtils.canUserPost();
+    try {
+      return user?.verificationStatus === 'approved' || false;
+    } catch (error) {
+      return false;
+    }
   };
 
   // Ensure profile exists in database - MUST be called before verification screen
@@ -206,6 +385,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setProfileLoading(true);
 
     try {
+      // Get the current Better Auth session
+      const sessionResult = await authClient.getSession();
+      if (!sessionResult.data?.user) {
+        setProfileLoading(false);
+        return false;
+      }
+
       // Try multiple times with increasing delays
       let attempts = 0;
       const maxAttempts = 3;
@@ -214,17 +400,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         attempts++;
         
         try {
-          const userProfile = await authUtils.ensureUserProfile(
-            user.id,
-            user.nickname || user.email?.split('@')[0] || 'User',
-            user.phone || undefined,
-            user.email || undefined
-          );
+          const dbUser = await getDatabaseUser(sessionResult.data.user);
           
-          // Update user with database profile
-          setUser(userProfile);
-          setProfileLoading(false);
-          return true;
+          if (dbUser) {
+            // Update user with database profile
+            setUser(dbUser);
+            setProfileLoading(false);
+            return true;
+          }
           
         } catch (error) {
           console.error(` [Profile] Attempt ${attempts} failed:`, error);

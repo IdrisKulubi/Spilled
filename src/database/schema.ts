@@ -14,9 +14,9 @@ export const idTypeEnum = pgEnum("id_type", [
 ]);
 
 export const tagTypeEnum = pgEnum("tag_type", [
-  "positive",
-  "negative",
-  "neutral",
+  "red_flag",
+  "good_vibes", 
+  "unsure",
 ]);
 
 // Users table
@@ -49,29 +49,33 @@ export const guys = pgTable("guys", {
 // Stories table
 export const stories = pgTable("stories", {
   id: text("id").primaryKey().default(sql`gen_random_uuid()`),
-  content: text("content"),
-  imageUrl: text("image_url"),
-  tagType: tagTypeEnum("tag_type"),
   guyId: text("guy_id").references(() => guys.id),
-  createdByUserId: text("created_by_user_id").references(() => users.id),
+  userId: text("user_id").references(() => users.id),
+  text: text("text"),
+  tags: tagTypeEnum("tags").array(),
+  imageUrl: text("image_url"),
+  anonymous: boolean("anonymous").default(false),
+  nickname: text("nickname"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
 // Comments table
 export const comments = pgTable("comments", {
   id: text("id").primaryKey().default(sql`gen_random_uuid()`),
-  content: text("content"),
   storyId: text("story_id").references(() => stories.id),
-  createdByUserId: text("created_by_user_id").references(() => users.id),
+  userId: text("user_id").references(() => users.id),
+  text: text("text"),
+  anonymous: boolean("anonymous").default(false),
+  nickname: text("nickname"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
 // Messages table
 export const messages = pgTable("messages", {
   id: text("id").primaryKey().default(sql`gen_random_uuid()`),
-  content: text("content"),
   senderId: text("sender_id").references(() => users.id),
   receiverId: text("receiver_id").references(() => users.id),
+  text: text("text"),
   expiresAt: timestamp("expires_at"),
   createdAt: timestamp("created_at").defaultNow(),
 });

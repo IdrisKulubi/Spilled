@@ -2,7 +2,14 @@
  * Admin Actions - Handle admin functionality for user verification management
  */
 
-import { supabase } from "../config/supabase";
+import { UserRepository } from "../repositories/UserRepository";
+import { db } from "../database/connection";
+import { users, stories, messages } from "../database/schema";
+import { sql, gte, eq } from "drizzle-orm";
+import type { User } from "../database/schema";
+
+// Initialize repositories
+const userRepository = new UserRepository();
 
 export interface PendingVerification {
   user_id: string;
@@ -40,13 +47,28 @@ export const fetchPendingVerifications = async (): Promise<{
   error?: string;
 }> => {
   try {
-    const { data, error } = await (supabase as any ).rpc("get_verification_queue");
+    const pendingUsers = await userRepository.findPendingVerificationUsers({
+      limit: 100, // Get all pending verifications
+    });
 
-    if (error) {
-      return { success: false, error: error.message };
-    }
+    const pendingVerifications: PendingVerification[] = pendingUsers.data.map((user: User) => {
+      const createdAt = new Date(user.createdAt);
+      const now = new Date();
+      const daysWaiting = Math.floor((now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
 
-    return { success: true, data: data || [] };
+      return {
+        user_id: user.id,
+        email: user.email || "",
+        nickname: user.nickname || "",
+        phone: user.phone || "",
+        id_image_url: user.idImageUrl || "",
+        id_type: user.idType || "school_id",
+        created_at: user.createdAt.toISOString(),
+        days_waiting: daysWaiting,
+      };
+    });
+
+    return { success: true, data: pendingVerifications };
   } catch (error: any) {
     return {
       success: false,
@@ -62,15 +84,23 @@ export const approveUserVerification = async (
   userId: string
 ): Promise<AdminResponse> => {
   try {
-    const { data, error } = await (supabase as any).rpc("approve_user_verification", {
-      user_id: userId,
-    });
+    const updatedUser = await userRepository.updateVerificationStatus(
+      userId,
+      "approved"
+    );
 
-    if (error) {
-      return { success: false, error: error.message };
+    if (!updatedUser) {
+      return { success: false, error: "User not found" };
     }
 
-    return { success: true, data };
+    return { 
+      success: true, 
+      data: {
+        user_id: updatedUser.id,
+        verification_status: updatedUser.verificationStatus,
+        verified_at: updatedUser.verifiedAt,
+      }
+    };
   } catch (error: any) {
     return { success: false, error: error.message || "Failed to approve user" };
   }
@@ -84,16 +114,24 @@ export const rejectUserVerification = async (
   reason?: string
 ): Promise<AdminResponse> => {
   try {
-    const { data, error } = await (supabase as any).rpc("reject_user_verification", {
-      user_id: userId,
-      reason: reason || "ID verification failed",
-    });
+    const updatedUser = await userRepository.updateVerificationStatus(
+      userId,
+      "rejected",
+      reason || "ID verification failed"
+    );
 
-    if (error) {
-      return { success: false, error: error.message };
+    if (!updatedUser) {
+      return { success: false, error: "User not found" };
     }
 
-    return { success: true, data };
+    return { 
+      success: true, 
+      data: {
+        user_id: updatedUser.id,
+        verification_status: updatedUser.verificationStatus,
+        rejection_reason: updatedUser.rejectionReason,
+      }
+    };
   } catch (error: any) {
     return { success: false, error: error.message || "Failed to reject user" };
   }
@@ -108,13 +146,52 @@ export const fetchAdminStats = async (): Promise<{
   error?: string;
 }> => {
   try {
-    const { data, error } = await (supabase as any).rpc("get_admin_stats");
+    // Get user statistics
+    const userStats = await userRepository.getUserStats();
 
-    if (error) {
-      return { success: false, error: error.message };
-    }
+    // Calculate date for one week ago
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
-    return { success: true, data: data || {} };
+    // Get new signups in the last week
+    const newSignupsResult = await db
+      .select({ count: sql`count(*)` })
+      .from(users)
+      .where(gte(users.createdAt, oneWeekAgo));
+
+    // Get new stories in the last week
+    const newStoriesResult = await db
+      .select({ count: sql`count(*)` })
+      .from(stories)
+      .where(gte(stories.createdAt, oneWeekAgo));
+
+    // Get new messages in the last week
+    const newMessagesResult = await db
+      .select({ count: sql`count(*)` })
+      .from(messages)
+      .where(gte(messages.createdAt, oneWeekAgo));
+
+    // Calculate average verification time for approved users
+    const avgVerificationResult = await db
+      .select({
+        avg_hours: sql`EXTRACT(EPOCH FROM AVG(verified_at - created_at)) / 3600`
+      })
+      .from(users)
+      .where(eq(users.verificationStatus, "approved"));
+
+    const avgVerificationHours = Number(avgVerificationResult[0]?.avg_hours || 0);
+
+    const adminStats: AdminStats = {
+      pending_verifications: userStats.pending,
+      verified_users: userStats.verified,
+      rejected_users: userStats.rejected,
+      new_signups_week: Number(newSignupsResult[0]?.count || 0),
+      new_stories_week: Number(newStoriesResult[0]?.count || 0),
+      new_messages_week: Number(newMessagesResult[0]?.count || 0),
+      avg_verification_hours: Math.round(avgVerificationHours * 100) / 100, // Round to 2 decimal places
+    };
+
+    return { success: true, data: adminStats };
   } catch (error: any) {
     return {
       success: false,
@@ -129,15 +206,25 @@ export const fetchAdminStats = async (): Promise<{
 export const bulkApprovePendingVerifications =
   async (): Promise<AdminResponse> => {
     try {
-      const { data, error } = await (supabase as any).rpc(
-        "bulk_approve_pending_verifications"
-      );
+      // Get all pending verification users
+      const pendingUsers = await userRepository.findPendingVerificationUsers({
+        limit: 1000, // Large limit to get all pending users
+      });
 
-      if (error) {
-        return { success: false, error: error.message };
+      if (pendingUsers.data.length === 0) {
+        return { success: true, data: { approved_count: 0 } };
       }
 
-      return { success: true, data: { approved_count: data } };
+      // Extract user IDs
+      const userIds = pendingUsers.data.map((user: User) => user.id);
+
+      // Bulk approve all pending users
+      const approvedUsers = await userRepository.bulkUpdateVerificationStatus(
+        userIds,
+        "approved"
+      );
+
+      return { success: true, data: { approved_count: approvedUsers.length } };
     } catch (error: any) {
       return {
         success: false,
@@ -147,7 +234,8 @@ export const bulkApprovePendingVerifications =
   };
 
 /**
- * Extract file path from storage URL and generate signed URL for private bucket access
+ * Get signed URL for verification image access
+ * TODO: Implement with Cloudinary or alternative file storage
  */
 export const getSignedImageUrl = async (
   storageUrl: string
@@ -157,124 +245,17 @@ export const getSignedImageUrl = async (
   }
 
   try {
-    let filePath = "";
-
-    // Try different URL patterns to extract the file path
-    if (storageUrl.includes("/storage/v1/object/public/id-verification/")) {
-      // Standard public URL format
-      const urlParts = storageUrl.split(
-        "/storage/v1/object/public/id-verification/"
-      );
-      if (urlParts.length === 2) {
-        filePath = urlParts[1];
-      }
-    } else if (storageUrl.includes("/id-verification/")) {
-      // Direct path format - extract everything after the last /id-verification/
-      const parts = storageUrl.split("/id-verification/");
-      filePath = parts[parts.length - 1];
-    } else {
-      // Try to extract filename from the end of the URL
-      const urlObj = new URL(storageUrl);
-      const pathSegments = urlObj.pathname.split("/");
-      filePath = pathSegments[pathSegments.length - 1];
+    // TODO: Replace with Cloudinary URL transformation or alternative storage solution
+    // For now, return the URL as-is if it's already a valid URL
+    if (storageUrl.startsWith('http://') || storageUrl.startsWith('https://')) {
+      return storageUrl;
     }
 
-    if (!filePath) {
-      return null;
-    }
-
-    // Fix duplicate path segments if they exist
-    if (filePath.startsWith("id-verification/")) {
-      filePath = filePath.replace("id-verification/", "");
-    }
-
-    // Ensure we have a valid file path
-    if (!filePath || filePath.length === 0) {
-      return null;
-    }
-
-    // First, let's list ALL files in the bucket to see what's actually there
-    const { data: allFiles, error: listError } = await supabase.storage
-      .from("id-verification")
-      .list("", { limit: 100 });
-
-    if (!listError && allFiles) {
-      // Check if there's an id-verification folder and list its contents
-      const hasIdVerificationFolder = allFiles?.find(
-        (f) => f.name === "id-verification"
-      );
-      if (hasIdVerificationFolder) {
-        const { data: folderFiles, error: folderError } = await supabase.storage
-          .from("id-verification")
-          .list("id-verification", { limit: 100 });
-
-        if (!folderError && folderFiles) {
-          // Check if our target file exists in the folder
-          const targetFileInFolder = folderFiles.find(
-            (f) => f.name === filePath
-          );
-          if (targetFileInFolder) {
-            // Update filePath to include the folder
-            filePath = `id-verification/${filePath}`;
-          } else {
-            // Look for partial matches in the folder
-            const partialMatches = folderFiles.filter(
-              (f) =>
-                f.name.includes(filePath.split("-")[0]) ||
-                filePath.includes(f.name.split("-")[0]) ||
-                f.name.includes("5c0213f7-66d6-4dc2-a09b-3da1f601aa72") ||
-                f.name.includes("1753978775858")
-            );
-            if (partialMatches.length > 0) {
-              // Use the first partial match
-              filePath = `id-verification/${partialMatches[0].name}`;
-            }
-          }
-        }
-      }
-    }
-
-    // Generate signed URL for private bucket access (valid for 1 hour)
-    const { data, error } = await supabase.storage
-      .from("id-verification")
-      .createSignedUrl(filePath, 3600); // 1 hour expiry
-
-    if (error) {
-      // The file path might have been updated above when we found it in the folder
-      // Let's try the updated path first
-      if (filePath.startsWith("id-verification/")) {
-        const { data: folderRetryData, error: folderRetryError } =
-          await supabase.storage
-            .from("id-verification")
-            .createSignedUrl(filePath, 3600);
-
-        if (!folderRetryError && folderRetryData?.signedUrl) {
-          return folderRetryData.signedUrl;
-        }
-      }
-
-      // Final fallback: try just the filename without subdirectories
-      if (filePath.includes("/")) {
-        const filename = filePath.split("/").pop();
-
-        const { data: retryData, error: retryError } = await supabase.storage
-          .from("id-verification")
-          .createSignedUrl(filename!, 3600);
-
-        if (!retryError && retryData?.signedUrl) {
-          return retryData.signedUrl;
-        }
-      }
-
-      return null;
-    }
-
-    if (!data?.signedUrl) {
-      return null;
-    }
-
-    return data.signedUrl;
+    // If it's a relative path, we'll need to implement proper file storage retrieval
+    console.warn('getSignedImageUrl: File storage migration not yet implemented');
+    return null;
   } catch (error) {
+    console.error('Error getting signed image URL:', error);
     return null;
   }
 };
@@ -285,20 +266,14 @@ export const getSignedImageUrl = async (
 export const fixImageUrl = (url: string): string => {
   if (!url) return url;
 
-  // Check for duplicate id-verification path and fix it
-  if (url.includes("/id-verification/id-verification/")) {
-    const fixedUrl = url.replace(
-      "/id-verification/id-verification/",
-      "/id-verification/"
-    );
-    return fixedUrl;
-  }
-
+  // TODO: Implement URL fixing for new file storage solution
+  // For now, return the URL as-is
   return url;
 };
 
 /**
- * Check Supabase storage bucket accessibility and list files for debugging
+ * Check file storage accessibility and list files for debugging
+ * TODO: Implement with Cloudinary or alternative file storage
  */
 export const checkStorageBucketAccess = async (): Promise<{
   success: boolean;
@@ -307,25 +282,14 @@ export const checkStorageBucketAccess = async (): Promise<{
   files?: string[];
 }> => {
   try {
-    // Try to list files in the id-verification bucket
-    const { data, error } = await supabase.storage
-      .from("id-verification")
-      .list("", { limit: 50 });
-
-    if (error) {
-      return {
-        success: false,
-        accessible: false,
-        error: error.message,
-      };
-    }
-
-    const fileNames = data?.map((file) => file.name) || [];
-
+    // TODO: Implement storage check with new file storage solution
+    console.warn('checkStorageBucketAccess: File storage migration not yet implemented');
+    
     return {
       success: true,
-      accessible: true,
-      files: fileNames,
+      accessible: false,
+      error: "File storage migration not yet implemented",
+      files: [],
     };
   } catch (error: any) {
     return {
@@ -338,19 +302,12 @@ export const checkStorageBucketAccess = async (): Promise<{
 
 /**
  * Debug function to help troubleshoot file paths
+ * TODO: Implement with new file storage solution
  */
 export const debugStorageFiles = async (): Promise<void> => {
   try {
-    const { error } = await supabase.storage
-      .from("id-verification")
-      .list("", { limit: 100 });
-
-    if (error) {
-      return;
-    }
-
-    // Debug information is available but not logged to console
-    // This function can be used for debugging purposes when needed
+    // TODO: Implement storage debugging with new file storage solution
+    console.warn('debugStorageFiles: File storage migration not yet implemented');
   } catch (error) {
     // Silent error handling
   }
@@ -358,23 +315,18 @@ export const debugStorageFiles = async (): Promise<void> => {
 
 /**
  * Subscribe to real-time verification status changes
+ * TODO: Implement with alternative real-time solution (WebSockets, Server-Sent Events, etc.)
  */
 export const subscribeToVerificationChanges = (
   onVerificationChange: (payload: any) => void
 ) => {
-  return supabase
-    .channel("verification_changes")
-    .on(
-      "postgres_changes",
-      {
-        event: "UPDATE",
-        schema: "public",
-        table: "users",
-        filter: "verification_status=neq.pending",
-      },
-      (payload) => {
-        onVerificationChange(payload);
-      }
-    )
-    .subscribe();
+  // TODO: Implement real-time subscriptions with alternative solution
+  console.warn('subscribeToVerificationChanges: Real-time subscriptions not yet implemented');
+  
+  // Return a mock subscription object for compatibility
+  return {
+    unsubscribe: () => {
+      console.log('Unsubscribed from verification changes');
+    }
+  };
 };

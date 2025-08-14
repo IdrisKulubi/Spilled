@@ -1,13 +1,16 @@
 /**
  * Send Message Action - TeaKE
- * Handles end-to-end encrypted messaging between users
+ * Handles messaging between users using Drizzle ORM
  */
 
-import { supabase, handleSupabaseError } from '../config/supabase';
 import { authUtils } from '../utils/auth';
-import { Database } from '../types/database';
+import { MessageRepository } from '../repositories/MessageRepository';
+import { UserRepository } from '../repositories/UserRepository';
+import { Message } from '../database/schema';
 
-type Message = Database['public']['Tables']['messages']['Row'];
+// Initialize repositories
+const messageRepository = new MessageRepository();
+const userRepository = new UserRepository();
 
 export interface SendMessageData {
   receiverId: string;
@@ -39,10 +42,10 @@ export const sendMessage = async (messageData: SendMessageData): Promise<Message
     }
 
     // Check if user is verified
-    if (currentUser.verification_status !== 'approved') {
-      const statusMessage = currentUser.verification_status === 'pending' 
+    if (currentUser.verificationStatus !== 'approved') {
+      const statusMessage = currentUser.verificationStatus === 'pending' 
         ? 'Your verification is still pending. Please wait for approval.'
-        : currentUser.verification_status === 'rejected'
+        : currentUser.verificationStatus === 'rejected'
         ? 'Your verification was rejected. Please re-upload your ID.'
         : 'Please verify your identity by uploading your ID to send messages.';
       
@@ -67,45 +70,21 @@ export const sendMessage = async (messageData: SendMessageData): Promise<Message
       };
     }
 
-    // Check if receiver exists
-    const { data: receiver, error: receiverError } = await supabase
-      .from('users')
-      .select('id')
-      .eq('id', messageData.receiverId)
-      .maybeSingle();
-
-    if (receiverError) {
-      console.error('Error checking receiver:', receiverError);
+    // Check if receiver exists using UserRepository
+    const receiverValidation = await authUtils.validateUserExists(messageData.receiverId);
+    if (!receiverValidation.exists) {
       return {
         success: false,
-        error: 'Failed to verify recipient'
+        error: receiverValidation.error || 'Recipient not found or account no longer exists'
       };
     }
 
-    if (!receiver) {
-      return {
-        success: false,
-        error: 'Recipient not found or account no longer exists'
-      };
-    }
-
-    // Create message (expires in 7 days automatically)
-    const { data: newMessage, error: messageError } = await supabase
-      .from('messages')
-      .insert({
-        sender_id: currentUser.id,
-        receiver_id: messageData.receiverId,
-        text: messageData.text.trim(),
-      })
-      .select('id')
-      .single();
-
-    if (messageError || !newMessage) {
-      return {
-        success: false,
-        error: handleSupabaseError(messageError)
-      };
-    }
+    // Create message using MessageRepository (expires in 7 days automatically)
+    const newMessage = await messageRepository.sendMessage({
+      senderId: currentUser.id,
+      receiverId: messageData.receiverId,
+      text: messageData.text.trim(),
+    });
 
     return {
       success: true,
@@ -113,6 +92,15 @@ export const sendMessage = async (messageData: SendMessageData): Promise<Message
     };
   } catch (error) {
     console.error('Error sending message:', error);
+    
+    // Handle validation errors from repository
+    if (error instanceof Error && error.message.includes('ValidationError')) {
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+    
     return {
       success: false,
       error: 'Failed to send message. Please try again.'
@@ -129,41 +117,39 @@ export const fetchChatHistory = async (otherUserId: string): Promise<ChatHistory
       return null;
     }
 
-    // Fetch messages between the two users
-    const { data: messages, error: messagesError } = await supabase
-      .from('messages')
-      .select('*')
-      .or(`and(sender_id.eq.${currentUser.id},receiver_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},receiver_id.eq.${currentUser.id})`)
-      .order('created_at', { ascending: true });
-
-    if (messagesError) {
-      console.error('Error fetching messages:', messagesError);
-      return null;
-    }
-
-    // Fetch other user's info
-    const { data: otherUser, error: userError } = await supabase
-      .from('users')
-      .select('id, nickname')
-      .eq('id', otherUserId)
-      .maybeSingle();
-
-    if (userError) {
-      console.error('Error fetching other user:', userError);
-      return null;
-    }
-
-    // If user doesn't exist, return null
-    if (!otherUser) {
+    // Validate other user exists
+    const otherUserValidation = await authUtils.validateUserExists(otherUserId);
+    if (!otherUserValidation.exists || !otherUserValidation.user) {
       console.error('Other user not found:', otherUserId);
       return null;
     }
 
+    // Fetch messages between the two users using MessageRepository
+    const chatHistoryResult = await messageRepository.fetchChatHistory(
+      currentUser.id, 
+      otherUserId,
+      { 
+        page: 1, 
+        limit: 100, // Get last 100 messages
+        includeExpired: false 
+      }
+    );
+
+    // Transform MessageWithUsers[] to Message[] for compatibility
+    const messages: Message[] = chatHistoryResult.data.map(messageWithUsers => ({
+      id: messageWithUsers.id,
+      senderId: messageWithUsers.senderId,
+      receiverId: messageWithUsers.receiverId,
+      text: messageWithUsers.text,
+      expiresAt: messageWithUsers.expiresAt,
+      createdAt: messageWithUsers.createdAt,
+    }));
+
     return {
-      messages: messages || [],
+      messages: messages,
       otherUser: {
-        id: otherUser.id,
-        nickname: otherUser.nickname,
+        id: otherUserValidation.user.id,
+        nickname: otherUserValidation.user.nickname || undefined,
       },
     };
   } catch (error) {
@@ -184,48 +170,30 @@ export const fetchConversations = async (): Promise<Array<{
       return null;
     }
 
-    // This is a complex query - in a real app, you might want to create a database view
-    // For now, we'll fetch all messages and group them by conversation
-    const { data: messages, error } = await supabase
-      .from('messages')
-      .select(`
-        *,
-        sender:users!messages_sender_id_fkey(id, nickname),
-        receiver:users!messages_receiver_id_fkey(id, nickname)
-      `)
-      .or(`sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`)
-      .order('created_at', { ascending: false });
+    // Fetch conversations using MessageRepository
+    const conversationsResult = await messageRepository.fetchConversations(
+      currentUser.id,
+      { page: 1, limit: 50 }
+    );
 
-    if (error || !messages) {
-      console.error('Error fetching conversations:', error);
-      return null;
-    }
+    // Transform ConversationSummary[] to the expected format
+    const conversations = conversationsResult.data.map(conversation => ({
+      otherUser: {
+        id: conversation.otherUser.id,
+        nickname: conversation.otherUser.nickname || undefined,
+      },
+      lastMessage: {
+        id: conversation.lastMessage.id,
+        senderId: conversation.lastMessage.isFromCurrentUser ? currentUser.id : conversation.otherUserId,
+        receiverId: conversation.lastMessage.isFromCurrentUser ? conversation.otherUserId : currentUser.id,
+        text: conversation.lastMessage.content,
+        expiresAt: null, // Not needed for display
+        createdAt: conversation.lastMessage.createdAt,
+      } as Message,
+      unreadCount: conversation.unreadCount,
+    }));
 
-    // Group messages by conversation partner
-    const conversationMap = new Map();
-    
-    messages.forEach((message: any) => {
-      const otherUserId = message.sender_id === currentUser.id 
-        ? message.receiver_id 
-        : message.sender_id;
-      
-      const otherUser = message.sender_id === currentUser.id 
-        ? message.receiver 
-        : message.sender;
-
-      if (!conversationMap.has(otherUserId)) {
-        conversationMap.set(otherUserId, {
-          otherUser: {
-            id: otherUser.id,
-            nickname: otherUser.nickname,
-          },
-          lastMessage: message,
-          unreadCount: 0, // TODO: Implement read status tracking
-        });
-      }
-    });
-
-    return Array.from(conversationMap.values());
+    return conversations;
   } catch (error) {
     console.error('Error fetching conversations:', error);
     return null;
@@ -243,43 +211,28 @@ export const deleteMessage = async (messageId: string): Promise<MessageResponse>
       };
     }
 
-    // Check if user owns the message
-    const { data: message, error: fetchError } = await supabase
-      .from('messages')
-      .select('sender_id')
-      .eq('id', messageId)
-      .single();
+    // Delete the message using MessageRepository (it handles ownership validation)
+    const deleted = await messageRepository.deleteMessage(messageId, currentUser.id);
 
-    if (fetchError || !message) {
+    if (!deleted) {
       return {
         success: false,
-        error: 'Message not found'
-      };
-    }
-
-    if (message.sender_id !== currentUser.id) {
-      return {
-        success: false,
-        error: 'You can only delete your own messages'
-      };
-    }
-
-    // Delete the message
-    const { error: deleteError } = await supabase
-      .from('messages')
-      .delete()
-      .eq('id', messageId);
-
-    if (deleteError) {
-      return {
-        success: false,
-        error: handleSupabaseError(deleteError)
+        error: 'Message not found or you can only delete your own messages'
       };
     }
 
     return { success: true };
   } catch (error) {
     console.error('Error deleting message:', error);
+    
+    // Handle validation errors from repository
+    if (error instanceof Error && error.message.includes('ValidationError')) {
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+    
     return {
       success: false,
       error: 'Failed to delete message. Please try again.'

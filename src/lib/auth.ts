@@ -76,4 +76,5 @@ export const auth = betterAuth({
 });
 
 export type Session = typeof auth.$Infer.Session;
-export type User = typeof auth.$Infer.User;
+// Use our database User type instead of Better Auth User type
+export type { User } from '../database/schema';

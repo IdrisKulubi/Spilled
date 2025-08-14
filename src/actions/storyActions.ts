@@ -3,8 +3,11 @@
  * Handles story modifications with proper permissions and soft delete
  */
 
-import { supabase } from "../config/supabase";
+import { StoryRepository } from "../repositories/StoryRepository";
+import { GuyRepository } from "../repositories/GuyRepository";
+import { CommentRepository } from "../repositories/CommentRepository";
 import { StoryFeedItem } from "./fetchStoriesFeed";
+import { ValidationError, NotFoundError } from "../repositories/utils/ErrorHandler";
 
 // Update story data interface
 export interface UpdateStoryData {
@@ -23,34 +26,22 @@ export interface UpdateStoryData {
 // Delete story (hard delete)
 export const deleteStory = async (storyId: string, userId: string) => {
   try {
+    const storyRepo = new StoryRepository();
+    
     // First verify the user owns this story
-    const { data: story, error: fetchError } = await supabase
-      .from("stories")
-      .select("user_id")
-      .eq("id", storyId)
-      .single();
-
-    if (fetchError) {
-      console.error("Error fetching story for delete:", fetchError);
-      return { success: false, error: "Story not found" };
-    }
-
-    if (story.user_id !== userId) {
+    const isOwner = await storyRepo.isOwner(storyId, userId);
+    
+    if (!isOwner) {
       return {
         success: false,
         error: "You can only delete your own stories bestie! 🚫",
       };
     }
 
-    // Hard delete the story (this will also cascade delete comments due to foreign key)
-    const { error: deleteError } = await supabase
-      .from("stories")
-      .delete()
-      .eq("id", storyId)
-      .eq("user_id", userId); // Double-check ownership
+    // Delete the story and all associated comments
+    const deleted = await storyRepo.deleteWithComments(storyId);
 
-    if (deleteError) {
-      console.error("Error deleting story:", deleteError);
+    if (!deleted) {
       return {
         success: false,
         error: "Failed to delete story. Please try again.",
@@ -60,6 +51,15 @@ export const deleteStory = async (storyId: string, userId: string) => {
     return { success: true };
   } catch (error) {
     console.error("Delete story error:", error);
+    
+    if (error instanceof NotFoundError) {
+      return { success: false, error: "Story not found" };
+    }
+    
+    if (error instanceof ValidationError) {
+      return { success: false, error: error.message };
+    }
+    
     return { success: false, error: "Something went wrong bestie! 😭" };
   }
 };
@@ -77,40 +77,37 @@ export const updateGuyInfo = async (
   }
 ) => {
   try {
+    const storyRepo = new StoryRepository();
+    const guyRepo = new GuyRepository();
+    
     // First verify the user owns this story
-    const { data: story, error: fetchError } = await supabase
-      .from("stories")
-      .select("user_id, guy_id")
-      .eq("id", storyId)
-      .single();
-
-    if (fetchError) {
-      console.error("Error fetching story for update:", fetchError);
-      return { success: false, error: "Story not found" };
-    }
-
-    if (story.user_id !== userId) {
+    const isOwner = await storyRepo.isOwner(storyId, userId);
+    
+    if (!isOwner) {
       return {
         success: false,
         error: "You can only edit your own stories bestie! 🚫",
       };
     }
 
-    // Update only the guy information (if guy exists)
-    if (story.guy_id) {
-      const { error: guyUpdateError } = await (supabase as any)
-        .from("guys")
-        .update({
-          name: guyData.guyName || null,
-          phone: guyData.guyPhone || null,
-          socials: guyData.guySocials || null,
-          location: guyData.guyLocation || null,
-          age: guyData.guyAge || null,
-        })
-        .eq("id", story.guy_id);
+    // Get the story to find the associated guy
+    const story = await storyRepo.findById(storyId);
+    
+    if (!story) {
+      return { success: false, error: "Story not found" };
+    }
 
-      if (guyUpdateError) {
-        console.error("Error updating guy info:", guyUpdateError);
+    // Update only the guy information (if guy exists)
+    if (story.guyId) {
+      const updatedGuy = await guyRepo.updateProfile(story.guyId, {
+        name: guyData.guyName || null,
+        phone: guyData.guyPhone || null,
+        socials: guyData.guySocials || null,
+        location: guyData.guyLocation || null,
+        age: guyData.guyAge || null,
+      });
+
+      if (!updatedGuy) {
         return { success: false, error: "Failed to update person information" };
       }
 
@@ -120,6 +117,15 @@ export const updateGuyInfo = async (
     }
   } catch (error) {
     console.error("Unexpected error updating guy info:", error);
+    
+    if (error instanceof NotFoundError) {
+      return { success: false, error: "Story or person not found" };
+    }
+    
+    if (error instanceof ValidationError) {
+      return { success: false, error: error.message };
+    }
+    
     return { success: false, error: "An unexpected error occurred" };
   }
 };
@@ -131,90 +137,65 @@ export const updateStory = async (
   updateData: UpdateStoryData
 ) => {
   try {
+    const storyRepo = new StoryRepository();
+    const guyRepo = new GuyRepository();
+    
     // First verify the user owns this story
-    const { data: story, error: fetchError } = await supabase
-      .from("stories")
-      .select("user_id, guy_id")
-      .eq("id", storyId)
-      .single();
-
-    if (fetchError) {
-      console.error("Error fetching story for update:", fetchError);
-      return { success: false, error: "Story not found" };
-    }
-
-    if (story.user_id !== userId) {
+    const isOwner = await storyRepo.isOwner(storyId, userId);
+    
+    if (!isOwner) {
       return {
         success: false,
         error: "You can only edit your own stories bestie! 🚫",
       };
     }
 
-    // Update the guy information first (if guy exists)
-    if (story.guy_id) {
-      const { error: guyUpdateError } = await (supabase as any)
-        .from("guys")
-        .update({
-          name: updateData.guyName || null,
-          phone: updateData.guyPhone || null,
-          socials: updateData.guySocials || null,
-          location: updateData.guyLocation || null,
-          age: updateData.guyAge || null,
-        })
-        .eq("id", story.guy_id);
+    // Get the story to find the associated guy
+    const story = await storyRepo.findById(storyId);
+    
+    if (!story) {
+      return { success: false, error: "Story not found" };
+    }
 
-      if (guyUpdateError) {
-        console.error("Error updating guy info:", guyUpdateError);
-        return { success: false, error: "Failed to update person information" };
-      }
+    // Update the guy information first (if guy exists)
+    if (story.guyId) {
+      await guyRepo.updateProfile(story.guyId, {
+        name: updateData.guyName || null,
+        phone: updateData.guyPhone || null,
+        socials: updateData.guySocials || null,
+        location: updateData.guyLocation || null,
+        age: updateData.guyAge || null,
+      });
     }
 
     // Update the story content
-    const { data: updatedStoryData, error: storyUpdateError } = await (
-      supabase as any
-    )
-      .from("stories")
-      .update({
-        text: updateData.storyText,
-        tags: updateData.tags,
-        image_url: updateData.imageUrl || null,
-        anonymous: updateData.anonymous,
-        nickname: updateData.anonymous ? null : updateData.nickname,
-      })
-      .eq("id", storyId)
-      .eq("user_id", userId) // Double-check ownership
-      .select("*");
+    const updatedStory = await storyRepo.updateStory(storyId, {
+      text: updateData.storyText,
+      tags: updateData.tags as ("red_flag" | "good_vibes" | "unsure")[],
+      imageUrl: updateData.imageUrl || null,
+      anonymous: updateData.anonymous,
+      nickname: updateData.anonymous ? null : updateData.nickname,
+    });
 
-    if (storyUpdateError) {
-      console.error("Error updating story:", storyUpdateError);
+    if (!updatedStory) {
       return {
         success: false,
         error: "Failed to update story. Please try again.",
       };
     }
 
-    // If the update was successful but returned no data (because nothing changed),
-    // we can refetch the story to get the latest data.
-    const updatedStory = updatedStoryData?.[0];
-    if (updatedStory) {
-      return { success: true, story: updatedStory };
-    } else {
-      // Refetch the story to return the latest version
-      const { data: refetchedStory, error: refetchError } = await supabase
-        .from("stories")
-        .select("*")
-        .eq("id", storyId)
-        .single();
-
-      if (refetchError) {
-        console.error("Error refetching story after update:", refetchError);
-        return { success: false, error: "Failed to retrieve updated story." };
-      }
-
-      return { success: true, story: refetchedStory };
-    }
+    return { success: true, story: updatedStory };
   } catch (error) {
     console.error("Update story error:", error);
+    
+    if (error instanceof NotFoundError) {
+      return { success: false, error: "Story not found" };
+    }
+    
+    if (error instanceof ValidationError) {
+      return { success: false, error: error.message };
+    }
+    
     return { success: false, error: "Something went wrong bestie! 😭" };
   }
 };
@@ -222,34 +203,22 @@ export const updateStory = async (
 // Delete comment (hard delete for comments)
 export const deleteComment = async (commentId: string, userId: string) => {
   try {
+    const commentRepo = new CommentRepository();
+    
     // First verify the user owns this comment
-    const { data: comment, error: fetchError } = await supabase
-      .from("comments")
-      .select("user_id")
-      .eq("id", commentId)
-      .single();
-
-    if (fetchError) {
-      console.error("Error fetching comment for delete:", fetchError);
-      return { success: false, error: "Comment not found" };
-    }
-
-    if (comment.user_id !== userId) {
+    const isOwner = await commentRepo.isOwner(commentId, userId);
+    
+    if (!isOwner) {
       return {
         success: false,
         error: "You can only delete your own comments bestie! 🚫",
       };
     }
 
-    // Hard delete the comment
-    const { error: deleteError } = await (supabase as any)
-      .from("comments")
-      .delete()
-      .eq("id", commentId)
-      .eq("user_id", userId); // Double-check ownership
+    // Delete the comment
+    const deleted = await commentRepo.delete(commentId);
 
-    if (deleteError) {
-      console.error("Error deleting comment:", deleteError);
+    if (!deleted) {
       return {
         success: false,
         error: "Failed to delete comment. Please try again.",
@@ -259,6 +228,15 @@ export const deleteComment = async (commentId: string, userId: string) => {
     return { success: true };
   } catch (error) {
     console.error("Delete comment error:", error);
+    
+    if (error instanceof NotFoundError) {
+      return { success: false, error: "Comment not found" };
+    }
+    
+    if (error instanceof ValidationError) {
+      return { success: false, error: error.message };
+    }
+    
     return { success: false, error: "Something went wrong bestie! 😭" };
   }
 };

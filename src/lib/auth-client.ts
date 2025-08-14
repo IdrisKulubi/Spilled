@@ -14,4 +14,5 @@ export const authClient = createAuthClient({
 });
 
 export type Session = typeof authClient.$Infer.Session;
-export type User = typeof authClient.$Infer.User;
+// Use our database User type instead of Better Auth User type
+export type { User } from '../database/schema';
