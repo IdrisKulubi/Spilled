@@ -52,14 +52,14 @@ export const authUtils = {
       // Configure WebBrowser for OAuth
       WebBrowser.maybeCompleteAuthSession();
 
-      const redirectUrl =
-        Platform.OS === "web"
-          ? AuthSession.makeRedirectUri({})
-          : AuthSession.makeRedirectUri({
-              scheme:
-                Platform.OS === "android" ? "com.vehem23.spilled" : "spilled",
-              path: "redirect",
-            });
+      // Use different redirect URLs for development vs production
+      const redirectUrl = __DEV__
+        ? AuthSession.makeRedirectUri({}) // Development - uses Expo proxy automatically
+        : AuthSession.makeRedirectUri({
+            scheme:
+              Platform.OS === "android" ? "com.vehem23.spilled" : "spilled",
+            path: "redirect",
+          });
 
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
@@ -103,7 +103,8 @@ export const authUtils = {
       );
 
       console.log("[Auth] OAuth redirect URL:", redirectUrl);
-      console.log("[Auth] WebBrowser.openAuthSessionAsync result:", result);
+      console.log("[Auth] WebBrowser result type:", result.type);
+      console.log("[Auth] WebBrowser result:", JSON.stringify(result, null, 2));
 
       if (result.type === "success") {
         const redirectResultUrl = (result as any)?.url?.trim?.() || "";
@@ -116,31 +117,102 @@ export const authUtils = {
 
         try {
           const parsedUrl = new URL(redirectResultUrl);
-          const hashParams = new URLSearchParams(
-            parsedUrl.hash.replace(/^#/, "")
-          );
-          accessToken = hashParams.get("access_token");
-          refreshToken = hashParams.get("refresh_token");
-        } catch (parseError) {}
+          console.log("[Auth] Parsed URL hash:", parsedUrl.hash);
+          console.log("[Auth] Parsed URL search:", parsedUrl.search);
+
+          // Try hash parameters first
+          if (parsedUrl.hash) {
+            const hashParams = new URLSearchParams(
+              parsedUrl.hash.replace(/^#/, "")
+            );
+            accessToken = hashParams.get("access_token");
+            refreshToken = hashParams.get("refresh_token");
+            console.log(
+              "[Auth] Hash tokens - access:",
+              !!accessToken,
+              "refresh:",
+              !!refreshToken
+            );
+          }
+
+          // If no tokens in hash, try search parameters
+          if (!accessToken && parsedUrl.search) {
+            const searchParams = new URLSearchParams(parsedUrl.search);
+            accessToken = searchParams.get("access_token");
+            refreshToken = searchParams.get("refresh_token");
+            console.log(
+              "[Auth] Search tokens - access:",
+              !!accessToken,
+              "refresh:",
+              !!refreshToken
+            );
+          }
+        } catch (parseError) {
+          console.error("[Auth] URL parsing error:", parseError);
+        }
 
         if (!accessToken || !refreshToken) {
+          console.error("[Auth] Missing tokens - trying alternative approach");
+
+          // Alternative: Let Supabase handle the session automatically
+          // Sometimes the tokens are processed by Supabase internally
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+
+          const {
+            data: { session },
+          } = await supabase.auth.getSession();
+          if (session?.access_token) {
+            console.log("[Auth] Found session via alternative method");
+            // Continue with the existing session
+          } else {
+            return {
+              success: false,
+              error:
+                "Failed to retrieve authentication tokens from OAuth callback",
+            };
+          }
+        } else {
+          // Only set session if we have valid tokens
+          const { error: sessionError } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          });
+
+          if (sessionError) {
+            return {
+              success: false,
+              error: "Failed to establish user session with tokens",
+            };
+          }
+        }
+      } else if (result.type === "cancel") {
+        console.log("[Auth] OAuth was canceled by user or redirect failed");
+
+        // Sometimes "cancel" happens due to redirect issues, not user cancellation
+        // Try to check if a session was actually established
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (session?.access_token) {
+          console.log(
+            "[Auth] Found session despite 'cancel' result - continuing"
+          );
+          // Continue with the flow
+        } else {
           return {
             success: false,
-            error: "Failed to retrieve authentication tokens",
+            error:
+              "OAuth authentication was canceled or redirect failed. Please check your internet connection and try again.",
           };
         }
-
-        const { error: sessionError } = await supabase.auth.setSession({
-          access_token: accessToken,
-          refresh_token: refreshToken,
-        });
-
-        if (sessionError) {
-          return {
-            success: false,
-            error: "Failed to establish user session with tokens",
-          };
-        }
+      } else {
+        console.error("[Auth] OAuth failed with result:", result);
+        return {
+          success: false,
+          error: "OAuth authentication failed. Please try again.",
+        };
       }
 
       // Wait a moment for the session to be established

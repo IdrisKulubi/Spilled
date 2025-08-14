@@ -11,17 +11,26 @@
     "lint": "expo lint",
     "build:android": "node scripts/build-android.js",
     "build:android:production": "node scripts/build-android.js production",
-    "build:android:preview": "node scripts/build-android.js preview"
+    "build:android:preview": "node scripts/build-android.js preview",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
+    "@better-auth/expo": "^1.3.6",
     "@expo/vector-icons": "^14.1.0",
     "@hookform/resolvers": "^5.2.1",
+    "@neondatabase/serverless": "^1.0.1",
     "@react-native-async-storage/async-storage": "2.1.2",
     "@react-navigation/bottom-tabs": "^7.3.10",
     "@react-navigation/elements": "^2.3.8",
     "@react-navigation/native": "^7.1.6",
     "@rneui/themed": "^4.0.0-rc.8",
     "@supabase/supabase-js": "^2.53.0",
+    "better-auth": "^1.3.6",
+    "dotenv": "^17.2.1",
+    "drizzle-orm": "^0.44.4",
     "expo": "~53.0.20",
     "expo-auth-session": "^6.2.1",
     "expo-blur": "~14.1.5",
@@ -67,6 +76,7 @@
   "devDependencies": {
     "@babel/core": "^7.25.2",
     "@types/react": "~19.0.10",
+    "drizzle-kit": "^0.31.4",
     "eslint": "^9.25.0",
     "eslint-config-expo": "~9.2.0",
     "typescript": "~5.8.3"
