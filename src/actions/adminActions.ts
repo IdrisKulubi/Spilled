@@ -235,7 +235,7 @@ export const bulkApprovePendingVerifications =
 
 /**
  * Get signed URL for verification image access
- * TODO: Implement with Cloudinary or alternative file storage
+ * Now implemented with Cloudflare R2
  */
 export const getSignedImageUrl = async (
   storageUrl: string
@@ -245,14 +245,20 @@ export const getSignedImageUrl = async (
   }
 
   try {
-    // TODO: Replace with Cloudinary URL transformation or alternative storage solution
-    // For now, return the URL as-is if it's already a valid URL
+    // If it's already a valid HTTP/HTTPS URL (R2 public URL), return as-is
     if (storageUrl.startsWith('http://') || storageUrl.startsWith('https://')) {
       return storageUrl;
     }
 
-    // If it's a relative path, we'll need to implement proper file storage retrieval
-    console.warn('getSignedImageUrl: File storage migration not yet implemented');
+    // If it's a key/path, generate a presigned URL for private access
+    const { r2Service } = await import('../services/r2Service');
+    const result = await r2Service.getPresignedDownloadUrl(storageUrl, 3600); // 1 hour expiry
+    
+    if (result.success && result.url) {
+      return result.url;
+    }
+
+    console.warn('Failed to generate signed URL for:', storageUrl);
     return null;
   } catch (error) {
     console.error('Error getting signed image URL:', error);
@@ -266,14 +272,14 @@ export const getSignedImageUrl = async (
 export const fixImageUrl = (url: string): string => {
   if (!url) return url;
 
-  // TODO: Implement URL fixing for new file storage solution
-  // For now, return the URL as-is
+  // With R2, URLs should be properly formatted, so just return as-is
+  // This function is kept for backward compatibility
   return url;
 };
 
 /**
  * Check file storage accessibility and list files for debugging
- * TODO: Implement with Cloudinary or alternative file storage
+ * Now implemented with Cloudflare R2
  */
 export const checkStorageBucketAccess = async (): Promise<{
   success: boolean;
@@ -282,34 +288,37 @@ export const checkStorageBucketAccess = async (): Promise<{
   files?: string[];
 }> => {
   try {
-    // TODO: Implement storage check with new file storage solution
-    console.warn('checkStorageBucketAccess: File storage migration not yet implemented');
+    // Test R2 configuration and connectivity
+    const { testR2Configuration } = await import('../config/test-r2');
+    const testResult = await testR2Configuration();
     
     return {
-      success: true,
-      accessible: false,
-      error: "File storage migration not yet implemented",
-      files: [],
+      success: testResult.success,
+      accessible: testResult.success,
+      error: testResult.success ? undefined : testResult.message,
+      files: [], // R2 doesn't provide easy file listing, but connection test is sufficient
     };
   } catch (error: any) {
     return {
       success: false,
       accessible: false,
-      error: error.message || "Storage check failed",
+      error: error.message || "R2 storage check failed",
+      files: [],
     };
   }
 };
 
 /**
  * Debug function to help troubleshoot file paths
- * TODO: Implement with new file storage solution
+ * Now implemented with Cloudflare R2
  */
 export const debugStorageFiles = async (): Promise<void> => {
   try {
-    // TODO: Implement storage debugging with new file storage solution
-    console.warn('debugStorageFiles: File storage migration not yet implemented');
+    // Run R2 configuration test and log results
+    const { runR2ConfigTest } = await import('../config/test-r2');
+    await runR2ConfigTest();
   } catch (error) {
-    // Silent error handling
+    console.error('Error running R2 debug test:', error);
   }
 };
 

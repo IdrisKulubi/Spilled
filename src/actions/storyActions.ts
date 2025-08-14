@@ -38,6 +38,13 @@ export const deleteStory = async (storyId: string, userId: string) => {
       };
     }
 
+    // Get the story to check for associated image
+    const story = await storyRepo.findById(storyId);
+    
+    if (!story) {
+      return { success: false, error: "Story not found" };
+    }
+
     // Delete the story and all associated comments
     const deleted = await storyRepo.deleteWithComments(storyId);
 
@@ -46,6 +53,18 @@ export const deleteStory = async (storyId: string, userId: string) => {
         success: false,
         error: "Failed to delete story. Please try again.",
       };
+    }
+
+    // Clean up associated image if it exists
+    if (story.imageUrl) {
+      try {
+        const { deleteStoryImage } = await import('../utils/storyImageUtils');
+        await deleteStoryImage(story.imageUrl);
+        console.log('Story image deleted:', story.imageUrl);
+      } catch (error) {
+        // Log error but don't fail the deletion - image cleanup is not critical
+        console.warn('Failed to delete story image during story deletion:', error);
+      }
     }
 
     return { success: true };
@@ -168,11 +187,35 @@ export const updateStory = async (
       });
     }
 
+    // Handle image update if needed
+    let finalImageUrl = story.imageUrl; // Keep existing image by default
+    
+    if (updateData.imageUrl !== undefined) {
+      // If imageUrl is explicitly provided (including null to remove image)
+      if (updateData.imageUrl !== story.imageUrl) {
+        // Image is being changed or removed
+        const { updateStoryImage } = await import('../utils/storyImageUtils');
+        const imageUpdateResult = await updateStoryImage(
+          null, // We're not uploading a new image here, just updating the URL
+          story.imageUrl, // Current image URL
+          storyId
+        );
+        
+        if (imageUpdateResult.success) {
+          finalImageUrl = updateData.imageUrl;
+        } else {
+          console.warn('Failed to update story image:', imageUpdateResult.error);
+          // Continue with story update even if image update fails
+          finalImageUrl = updateData.imageUrl;
+        }
+      }
+    }
+
     // Update the story content
     const updatedStory = await storyRepo.updateStory(storyId, {
       text: updateData.storyText,
       tags: updateData.tags as ("red_flag" | "good_vibes" | "unsure")[],
-      imageUrl: updateData.imageUrl || null,
+      imageUrl: finalImageUrl,
       anonymous: updateData.anonymous,
       nickname: updateData.anonymous ? null : updateData.nickname,
     });

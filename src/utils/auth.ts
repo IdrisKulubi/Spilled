@@ -7,6 +7,7 @@ import { authClient } from "../lib/auth-client";
 import { UserRepository } from "../repositories/UserRepository";
 import type { User } from "../database/schema";
 import * as FileSystem from "expo-file-system";
+import { uploadImageToR2, deleteImageFromR2, validateImageFile } from "./imageUpload";
 
 // Initialize repository
 const userRepository = new UserRepository();
@@ -279,25 +280,45 @@ export const authUtils = {
         };
       }
 
-      // TODO: Implement file upload with Cloudinary or alternative storage
-      // For now, return a placeholder implementation
-      console.warn(
-        "uploadVerificationImage: File storage migration not yet implemented"
-      );
+      // Validate image file before upload
+      const validation = await validateImageFile(imageUri, 10 * 1024 * 1024); // 10MB limit
+      if (!validation.valid) {
+        return {
+          success: false,
+          error: validation.error || "Invalid image file",
+        };
+      }
 
-      // Update user profile with verification status
+      // Upload image to R2
+      const uploadResult = await uploadImageToR2(imageUri, {
+        prefix: 'verification-images',
+        fileName: `verification_${currentUser.id}_${Date.now()}.jpg`
+      });
+
+      if (!uploadResult.success) {
+        return {
+          success: false,
+          error: uploadResult.error || "Failed to upload verification image",
+        };
+      }
+
+      // Update user profile with verification status and image URL
       const updatedUser = await userRepository.update(currentUser.id, {
         idType: idType,
         verificationStatus: "pending",
-        // idImageUrl will be set once file storage is implemented
+        idImageUrl: uploadResult.url,
       });
 
       if (updatedUser) {
         return {
           success: true,
-          uploadUrl: undefined, // Will be set once file storage is implemented
+          uploadUrl: uploadResult.url,
         };
       } else {
+        // If database update fails, try to clean up uploaded image
+        if (uploadResult.url) {
+          await deleteImageFromR2(uploadResult.url).catch(console.error);
+        }
         return {
           success: false,
           error: "Failed to update verification status",

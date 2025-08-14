@@ -159,17 +159,23 @@ export const addPost = async (postData: CreatePostData): Promise<PostResponse> =
   }
 };
 
-// Helper function to upload image (placeholder for new file storage)
+// Helper function to upload image to Cloudflare R2
 export const uploadStoryImage = async (uri: string, storyId: string): Promise<string | null> => {
   try {
-    // TODO: Implement file upload with Cloudinary or alternative storage
-    // This is a placeholder implementation for the migration
-    console.warn('[StoryUpload] File storage migration not yet implemented');
-    console.log('[StoryUpload] Would upload image:', { uri, storyId });
-    
-    // For now, return null to indicate upload is not yet implemented
-    // Once file storage is migrated (task 7), this function will be updated
-    return null;
+    console.log('[StoryUpload] Starting image upload:', { uri, storyId });
+
+    // Use the story image utilities for consistent handling
+    const { uploadStoryImageWithValidation } = await import('../utils/storyImageUtils');
+    const result = await uploadStoryImageWithValidation(uri, storyId);
+
+    if (!result.success) {
+      console.error('[StoryUpload] Upload failed:', result.error);
+      return null;
+    }
+
+    console.log('[StoryUpload] Image uploaded successfully:', result.imageUrl);
+    return result.imageUrl || null;
+
   } catch (error) {
     console.error('[StoryUpload] Error uploading image:', error);
     return null;
