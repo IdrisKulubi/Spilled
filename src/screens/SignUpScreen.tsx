@@ -12,35 +12,25 @@ import { Ionicons } from "@expo/vector-icons";
 import { TeaKEStyles } from "../constants/Styles";
 import { Colors } from "../../constants/Colors";
 import { useAuth } from "../contexts/AuthContext";
+import { GoogleSignInButton } from "../components/GoogleSignInButton";
+import { useNavigation } from '@react-navigation/native';
 
 export const SignUpScreen: React.FC = () => {
   const [loading, setLoading] = useState(false);
-  const { signInWithGoogle } = useAuth();
+  const navigation = useNavigation();
 
-  const handleGoogleSignUp = async () => {
-    setLoading(true);
-    try {
-      const result = await signInWithGoogle();
+  const handleGoogleSignUpSuccess = (user: any) => {
+    console.log('Sign-up successful:', user);
+    // The welcome message is shown by the GoogleSignInButton component
+    // Navigation will be handled by the auth context or manually navigate
+    // navigation.navigate('Verification');
+  };
 
-      if (result.success) {
-        Alert.alert(
-          "Welcome to TeaKE! 🎉",
-          "Your account has been created successfully. Please upload your ID for verification to start posting and messaging.",
-          [{ text: "Let's go!" }]
-        );
-        // Navigation will be handled by AuthContext state change
-      } else {
-        Alert.alert(
-          "Oops! Something went wrong ",
-          result.error || "Failed to create account with Google"
-        );
-      }
-    } catch (error) {
-      console.error("Google Sign Up Error:", error);
-      Alert.alert("Error", "Failed to create account. Please try again.");
-    } finally {
-      setLoading(false);
-    }
+  const handleGoogleSignUpError = (error: string) => {
+    Alert.alert(
+      "Oops! Something went wrong",
+      error
+    );
   };
 
   return (
@@ -96,24 +86,12 @@ export const SignUpScreen: React.FC = () => {
 
         {/* CTA Section */}
         <View style={styles.ctaSection}>
-          <TouchableOpacity
-            style={styles.googleButton}
-            onPress={handleGoogleSignUp}
-            disabled={loading}
-            activeOpacity={0.8}
-          >
-            {loading ? (
-              <ActivityIndicator
-                color={Colors.light.textOnPrimary}
-                size="small"
-              />
-            ) : (
-              <>
-                <Ionicons name="logo-google" size={24} color="#FFFFFF" />
-                <Text style={styles.googleButtonText}>Join the sisterhood</Text>
-              </>
-            )}
-          </TouchableOpacity>
+          <GoogleSignInButton
+            buttonText="Join the sisterhood"
+            onSuccess={handleGoogleSignUpSuccess}
+            onError={handleGoogleSignUpError}
+            isSignUp={true}
+          />
 
           <Text style={styles.ctaSubtext}>
             Free to join • Safe & anonymous • Girls only 💕

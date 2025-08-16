@@ -3,8 +3,10 @@
  * Fetches all stories for the explore feed with guy info, comments, and reactions
  */
 
-import { supabase, handleSupabaseError } from '../config/supabase';
-import { Database } from '../types/database';
+import { db } from '../database/connection';
+import { stories, guys, comments, storyReactions } from '../database/schema';
+import { authClient } from '../lib/auth-client';
+import { and, desc, eq, inArray } from 'drizzle-orm';
 
 type TagType = Database['public']['Enums']['tag_type'];
 
@@ -59,144 +61,90 @@ export interface ReactionResponse {
 }
 
 // Fetch stories feed with pagination
+
 export const fetchStoriesFeed = async (
   limit: number = 20,
   offset: number = 0
 ): Promise<FeedResponse> => {
   try {
-    // Fetch stories with guy info and comments
-    const { data: stories, error: storiesError } = await supabase
-      .from('stories')
-      .select(`
-        id,
-        guy_id,
-        user_id,
-        text,
-        tags,
-        image_url,
-        created_at,
-        anonymous,
-        nickname,
-        guys!inner (
-          id,
-          name,
-          phone,
-          socials,
-          location,
-          age
-        ),
-        comments (
-          id,
-          user_id,
-          text,
-          anonymous,
-          nickname,
-          created_at
-        )
-      `)
-      .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1);
+    const session = await authClient.getSession();
+    const user = session?.data?.user;
 
-    if (storiesError) {
-      console.error('Error fetching stories feed:', storiesError);
-      return {
-        success: false,
-        stories: [],
-        error: 'Failed to load stories feed'
-      };
-    }
+    const results = await db
+      .select()
+      .from(stories)
+      .leftJoin(guys, eq(stories.guyId, guys.id))
+      .orderBy(desc(stories.createdAt))
+      .limit(limit)
+      .offset(offset);
 
-    if (!stories || stories.length === 0) {
-      return {
-        success: true,
-        stories: []
-      };
-    }
+    const processedStories: StoryFeedItem[] = await Promise.all(
+      results.map(async (row) => {
+        const story = row.stories;
+        const guy = row.guys;
 
-    // Get story IDs for fetching reactions
-    const storyIds = stories.map(story => story.id);
-    
-    // Fetch reactions for all stories
-    const { data: reactions, error: reactionsError } = await supabase
-      .from('story_reactions')
-      .select('story_id, reaction_type')
-      .in('story_id', storyIds);
+        const commentCount = await db
+          .select()
+          .from(comments)
+          .where(eq(comments.storyId, story.id));
 
-    // Get current user's reactions if authenticated
-    const { data: { user } } = await supabase.auth.getUser();
-    let userReactions: any[] = [];
-    
-    if (user) {
-      const { data: userReactionsData } = await supabase
-        .from('story_reactions')
-        .select('story_id, reaction_type')
-        .in('story_id', storyIds)
-        .eq('user_id', user.id);
-      
-      userReactions = userReactionsData || [];
-    }
+        const reactionCounts = await db
+          .select()
+          .from(storyReactions)
+          .where(eq(storyReactions.storyId, story.id));
 
-    // Process stories data
-    const processedStories: StoryFeedItem[] = stories.map(story => {
-      // Calculate reactions for this story
-      const storyReactions = (reactions || []).filter(r => r.story_id === story.id);
-      const reactionCounts: StoryReactions = {
-        red_flag: 0,
-        good_vibes: 0,
-        unsure: 0,
-        total: 0
-      };
+        let userReaction: ReactionType | undefined;
+        if (user) {
+          const reaction = await db
+            .select()
+            .from(storyReactions)
+            .where(
+              and(
+                eq(storyReactions.storyId, story.id),
+                eq(storyReactions.userId, user.id)
+              )
+            );
+          userReaction = reaction[0]?.reactionType as ReactionType;
+        }
 
-      // Count reactions manually since we can't use SQL GROUP BY
-      storyReactions.forEach(reaction => {
-        const reactionType = reaction.reaction_type as ReactionType;
-        reactionCounts[reactionType] = (reactionCounts[reactionType] || 0) + 1;
-        reactionCounts.total += 1;
-      });
-
-      // Get user's reaction for this story
-      const userReaction = userReactions.find(ur => ur.story_id === story.id);
-
-      return {
-        id: story.id,
-        guy_id: story.guy_id,
-        guy_name: story.guys?.name,
-        guy_phone: story.guys?.phone,
-        guy_socials: story.guys?.socials,
-        guy_location: story.guys?.location,
-        guy_age: story.guys?.age,
-        user_id: story.user_id,
-        text: story.text,
-        tags: story.tags,
-        image_url: story.image_url,
-        created_at: story.created_at,
-        anonymous: story.anonymous,
-        nickname: story.nickname,
-        comments: (story.comments || []).map(comment => ({
-          id: comment.id,
-          user_id: comment.user_id,
-          text: comment.text,
-          created_at: comment.created_at,
-          anonymous: comment.anonymous,
-          nickname: comment.nickname,
-        })),
-        comment_count: story.comments?.length || 0,
-        reactions: reactionCounts,
-        user_reaction: userReaction?.reaction_type
-      };
-    });
+        return {
+          id: story.id,
+          guy_id: story.guyId,
+          guy_name: guy?.name,
+          guy_phone: guy?.phone,
+          guy_socials: guy?.socials,
+          guy_location: guy?.location,
+          guy_age: guy?.age,
+          user_id: story.userId,
+          text: story.text,
+          tags: story.tags,
+          image_url: story.imageUrl,
+          created_at: story.createdAt,
+          anonymous: story.anonymous,
+          nickname: story.nickname,
+          comments: [],
+          comment_count: commentCount.length,
+          reactions: {
+            red_flag: reactionCounts.filter(r => r.reactionType === 'red_flag').length,
+            good_vibes: reactionCounts.filter(r => r.reactionType === 'good_vibes').length,
+            unsure: reactionCounts.filter(r => r.reactionType === 'unsure').length,
+            total: reactionCounts.length
+          },
+          user_reaction: userReaction,
+        };
+      })
+    );
 
     return {
       success: true,
-      stories: processedStories
+      stories: processedStories,
     };
-
   } catch (error) {
     console.error('Error fetching stories feed:', error);
     return {
       success: false,
       stories: [],
-      error: 'Failed to load stories feed'
+      error: 'Failed to load stories feed',
     };
   }
 };
@@ -207,89 +155,49 @@ export const reactToStory = async (
   reactionType: ReactionType
 ): Promise<ReactionResponse> => {
   try {
-    const { data: { user } } = await supabase.auth.getUser();
-    
+    const session = await authClient.getSession();
+    const user = session?.data?.user;
+
     if (!user) {
       return {
         success: false,
-        error: 'You must be logged in to react to stories'
+        error: 'You must be logged in to react to stories',
       };
     }
 
-    // Check if user already reacted to this story
-    const { data: existingReaction, error: checkError } = await supabase
-      .from('story_reactions')
-      .select('id, reaction_type')
-      .eq('story_id', storyId)
-      .eq('user_id', user.id)
-      .maybeSingle();
+    const existingReaction = await db
+      .select()
+      .from(storyReactions)
+      .where(
+        and(
+          eq(storyReactions.storyId, storyId),
+          eq(storyReactions.userId, user.id)
+        )
+      );
 
-    if (checkError) {
-      console.error('Error checking existing reaction:', checkError);
-      return {
-        success: false,
-        error: 'Failed to process reaction'
-      };
-    }
-
-    if (existingReaction) {
-      // If same reaction, remove it (toggle off)
-      if (existingReaction.reaction_type === reactionType) {
-        const { error: deleteError } = await supabase
-          .from('story_reactions')
-          .delete()
-          .eq('id', existingReaction.id);
-
-        if (deleteError) {
-          console.error('Error removing reaction:', deleteError);
-          return {
-            success: false,
-            error: 'Failed to remove reaction'
-          };
-        }
+    if (existingReaction.length > 0) {
+      if (existingReaction[0].reactionType === reactionType) {
+        await db.delete(storyReactions).where(eq(storyReactions.id, existingReaction[0].id));
       } else {
-        // Update to new reaction type
-        const { error: updateError } = await supabase
-          .from('story_reactions')
-          .update({ reaction_type: reactionType })
-          .eq('id', existingReaction.id);
-
-        if (updateError) {
-          console.error('Error updating reaction:', updateError);
-          return {
-            success: false,
-            error: 'Failed to update reaction'
-          };
-        }
+        await db
+          .update(storyReactions)
+          .set({ reactionType })
+          .where(eq(storyReactions.id, existingReaction[0].id));
       }
     } else {
-      // Add new reaction
-      const { error: insertError } = await supabase
-        .from('story_reactions')
-        .insert({
-          story_id: storyId,
-          user_id: user.id,
-          reaction_type: reactionType
-        });
-
-      if (insertError) {
-        console.error('Error adding reaction:', insertError);
-        return {
-          success: false,
-          error: 'Failed to add reaction'
-        };
-      }
+      await db.insert(storyReactions).values({
+        storyId,
+        userId: user.id,
+        reactionType,
+      });
     }
 
-    return {
-      success: true
-    };
-
+    return { success: true };
   } catch (error) {
     console.error('Error reacting to story:', error);
     return {
       success: false,
-      error: 'Failed to process reaction'
+      error: 'Failed to process reaction',
     };
   }
 };

@@ -13,37 +13,31 @@ import { Ionicons } from "@expo/vector-icons";
 import { TeaKEStyles } from "../constants/Styles";
 import { Colors } from "../../constants/Colors";
 import { useAuth } from "../contexts/AuthContext";
+import { GoogleSignInButton } from "../components/GoogleSignInButton";
+import { useNavigation } from '@react-navigation/native';
 
 export const SignInScreen: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [debugVisible, setDebugVisible] = useState(false);
   const [debugLogs, setDebugLogs] = useState<string[]>([]);
-  const { signInWithGoogle } = useAuth();
+  const navigation = useNavigation();
 
   const addDebugLog = (message: string) => {
     const timestamp = new Date().toLocaleTimeString();
     setDebugLogs(prev => [...prev, `[${timestamp}] ${message}`]);
   };
 
-  const handleGoogleSignIn = async () => {
-    setLoading(true);
-    try {
-      const result = await signInWithGoogle();
+  const handleGoogleSignInSuccess = (user: any) => {
+    console.log('Sign-in successful:', user);
+    // Navigation will be handled by the auth context or manually navigate
+    // navigation.navigate('Home');
+  };
 
-      if (result.success) {
-        // Navigation will be handled by AuthContext state change
-      } else {
-        Alert.alert(
-          "Oops! Something went wrong ",
-          result.error || "Failed to sign in with Google"
-        );
-      }
-    } catch (error) {
-      console.error("Google Sign-In Error:", error);
-      Alert.alert("Error", "Failed to sign in. Please try again.");
-    } finally {
-      setLoading(false);
-    }
+  const handleGoogleSignInError = (error: string) => {
+    Alert.alert(
+      "Oops! Something went wrong",
+      error
+    );
   };
 
   const handleDebugSignIn = async () => {
@@ -144,26 +138,12 @@ export const SignInScreen: React.FC = () => {
 
         {/* CTA Section */}
         <View style={styles.ctaSection}>
-          <TouchableOpacity
-            style={styles.googleButton}
-            onPress={handleGoogleSignIn}
-            disabled={loading}
-            activeOpacity={0.8}
-          >
-            {loading ? (
-              <ActivityIndicator
-                color={Colors.light.textOnPrimary}
-                size="small"
-              />
-            ) : (
-              <>
-                <Ionicons name="logo-google" size={24} color="#FFFFFF" />
-                <Text style={styles.googleButtonText}>
-                  Continue with Google
-                </Text>
-              </>
-            )}
-          </TouchableOpacity>
+          <GoogleSignInButton
+            buttonText="Continue with Google"
+            onSuccess={handleGoogleSignInSuccess}
+            onError={handleGoogleSignInError}
+            isSignUp={false}
+          />
 
           <Text style={styles.ctaSubtext}>
             Secure sign-in • Your data is safe • Girls only 💕

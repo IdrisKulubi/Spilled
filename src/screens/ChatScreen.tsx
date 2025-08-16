@@ -27,7 +27,6 @@ import {
   ChatHistory,
   MessageResponse
 } from '../actions/sendMessage';
-import { supabase } from '../config/supabase';
 
 interface Message {
   id: string;
@@ -127,33 +126,6 @@ export const ChatScreen: React.FC<ChatScreenProps> = () => {
     }, 100);
   };
 
-  // Setup real-time messaging
-  useEffect(() => {
-    if (!user || !otherUserId) return;
-
-    // Subscribe to new messages
-    const messageSubscription = supabase
-      .channel('messages')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
-          filter: `or(and(sender_id.eq.${user.id},receiver_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},receiver_id.eq.${user.id}))`
-        },
-        (payload) => {
-          const newMessage = payload.new as Message;
-          setMessages(prev => [...prev, newMessage]);
-          scrollToBottom();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      messageSubscription.unsubscribe();
-    };
-  }, [user, otherUserId]);
 
   // Load initial data
   useEffect(() => {

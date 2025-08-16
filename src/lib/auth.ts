@@ -70,7 +70,7 @@ export const auth = betterAuth({
   },
   plugins: [
     expo({
-      overrideOrigin: false, // Set to true if facing CORS issues with Expo API routes
+      overrideOrigin: true, // Set to true if facing CORS issues with Expo API routes
     }),
   ],
 });

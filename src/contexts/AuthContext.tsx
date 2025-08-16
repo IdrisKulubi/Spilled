@@ -3,21 +3,14 @@
  * Manages user authentication state across the app
  */
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { authClient } from '../lib/auth-client';
-import type { Session } from '../lib/auth-client';
-import type { User as BetterAuthUser } from '../lib/auth-client';
 import { UserRepository } from '../repositories/UserRepository';
+import { isUserAdmin } from '../config/admin';
+import { useGoogleAuth, handleGoogleSignIn, checkGoogleSession, signOutGoogle } from '../utils/google-auth';
+import * as Google from 'expo-auth-session/providers/google';
 import type { User } from '../database/schema';
-
-// Admin configuration
-const ADMIN_EMAIL = process.env.EXPO_PUBLIC_ADMIN_EMAIL || 'kulubiidris@gmail.com';
-
-// Helper function to check if user is admin
-const isUserAdmin = (userEmail?: string): boolean => {
-  if (!userEmail) return false;
-  return userEmail.toLowerCase() === ADMIN_EMAIL.toLowerCase();
-};
+import type { User as BetterAuthUser } from 'better-auth';
 
 interface AuthContextType {
   user: User | null;
@@ -118,51 +111,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   const signInWithGoogle = async () => {
-    setLoading(true);
-    try {
-      const result = await authClient.signIn.social({
-        provider: "google",
-        callbackURL: "/", // Redirect to home after sign in
-      });
-
-      if (result.error) {
-        setLoading(false);
-        return {
-          success: false,
-          error: result.error.message || 'Google sign-in failed',
-        };
-      }
-
-      // Check if we have a user in the response
-      if (result.data && 'user' in result.data && result.data.user) {
-        const dbUser = await getDatabaseUser(result.data.user);
-        setUser(dbUser);
-        
-        // Check admin status
-        if (result.data.user.email) {
-          const adminStatus = isUserAdmin(result.data.user.email);
-          setIsAdmin(adminStatus);
-        }
-        
-        setLoading(false);
-        return {
-          success: true,
-          user: dbUser,
-        };
-      }
-
-      // If no user in response, it might be a redirect flow
-      setLoading(false);
-      return {
-        success: true,
-      };
-    } catch (error) {
-      setLoading(false);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Google sign-in failed',
-      };
-    }
+    // This method needs to be called from a component that uses the hook
+    // For now, return an error indicating the proper way to use Google sign-in
+    return {
+      success: false,
+      error: 'Please use the Google sign-in button component that uses useGoogleAuth hook',
+    };
   };
 
   // Deprecated functions - keeping for backwards compatibility

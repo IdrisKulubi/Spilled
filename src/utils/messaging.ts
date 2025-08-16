@@ -3,7 +3,9 @@
  */
 
 import { authUtils } from "./auth";
-import { supabase } from "../config/supabase";
+import { db } from '../database/connection';
+import { messages } from '../database/schema';
+import { and, or, eq, desc } from 'drizzle-orm';
 
 export interface MessageValidation {
   canMessage: boolean;
@@ -89,28 +91,24 @@ export const messagingUtils = {
       const currentUser = await authUtils.getCurrentUser();
       if (!currentUser) return null;
 
-      // Get last message between users
-      const { data: lastMessage, error } = await supabase
-        .from("messages")
-        .select("*")
-        .or(
-          `and(sender_id.eq.${currentUser.id},receiver_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},receiver_id.eq.${currentUser.id})`
+      const lastMessage = await db
+        .select()
+        .from(messages)
+        .where(
+          or(
+            and(eq(messages.senderId, currentUser.id), eq(messages.receiverId, otherUserId)),
+            and(eq(messages.senderId, otherUserId), eq(messages.receiverId, currentUser.id))
+          )
         )
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (error) {
-        console.error("Error fetching conversation preview:", error);
-        return null;
-      }
+        .orderBy(desc(messages.createdAt))
+        .limit(1);
 
       return {
-        lastMessage,
-        hasMessages: !!lastMessage,
+        lastMessage: lastMessage[0],
+        hasMessages: lastMessage.length > 0,
       };
     } catch (error) {
-      console.error("Error getting conversation preview:", error);
+      console.error('Error getting conversation preview:', error);
       return null;
     }
   },
