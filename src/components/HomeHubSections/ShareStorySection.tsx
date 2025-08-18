@@ -10,7 +10,7 @@ import {
   StyleSheet,
   TouchableOpacity 
 } from 'react-native';
-import { TeaKEStyles, Spacing } from '../../constants/Styles';
+import {  Spacing } from '../../constants/Styles';
 import { TeaKEButton, TeaKECard } from '../../components/ui';
 import { Colors } from '../../../constants/Colors';
 import { MaterialIcons } from '@expo/vector-icons';

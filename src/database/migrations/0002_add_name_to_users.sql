@@ -1,0 +1,5 @@
+-- Add Better Auth required columns to users table
+ALTER TABLE users ADD COLUMN IF NOT EXISTS name TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT false;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS image TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT now() NOT NULL;

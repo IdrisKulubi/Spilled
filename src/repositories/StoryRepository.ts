@@ -265,7 +265,7 @@ export class StoryRepository extends BaseRepository<Story, InsertStory> {
       const { limit: validLimit, offset } = QueryBuilder.pagination(page, limit);
       
       // Build where conditions
-      let whereCondition = eq(stories.guyId, guyId);
+      let whereCondition: any = eq(stories.guyId, guyId);
       
       if (search) {
         const searchCondition = ilike(stories.text, `%${search}%`);
@@ -306,7 +306,7 @@ export class StoryRepository extends BaseRepository<Story, InsertStory> {
       const { limit: validLimit, offset } = QueryBuilder.pagination(page, limit);
       
       // Build where conditions
-      let whereCondition = eq(stories.userId, userId);
+      let whereCondition: any = eq(stories.userId, userId);
       
       if (search) {
         const searchCondition = ilike(stories.text, `%${search}%`);
@@ -348,7 +348,7 @@ export class StoryRepository extends BaseRepository<Story, InsertStory> {
       const { limit: validLimit, offset } = QueryBuilder.pagination(page, limit);
       
       // Build where conditions - check if tag is in the array
-      let whereCondition = sql`${tagType} = ANY(${stories.tags})`;
+      let whereCondition: any = sql`${tagType} = ANY(${stories.tags})`;
       
       if (search) {
         const searchCondition = ilike(stories.text, `%${search}%`);

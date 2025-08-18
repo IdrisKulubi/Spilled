@@ -11,7 +11,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
-  ActivityIndicator 
 } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { TeaKEStyles, Spacing } from '../../constants/Styles';
@@ -22,7 +21,6 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 export const SearchSection: React.FC = () => {
-  const { user } = useAuth();
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<GuyProfile[]>([]);

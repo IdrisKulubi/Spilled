@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Google from 'expo-auth-session/providers/google';
 import * as WebBrowser from 'expo-web-browser';
 import * as SecureStore from 'expo-secure-store';
+import { makeRedirectUri } from 'expo-auth-session';
 import { Colors } from '../../constants/Colors';
 import { useAuth } from '../contexts/AuthContext';
 import { UserRepository } from '../repositories/UserRepository';
@@ -41,15 +42,28 @@ export const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
   const [loading, setLoading] = useState(false);
   const userRepository = new UserRepository();
 
-  // Use the Google Auth Request hook
-  const [request, response, promptAsync] = Google.useAuthRequest({
-    // Use web client ID for development/web
-    webClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
-    // Add Android and iOS client IDs when available
-    androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
-    iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
-    scopes: ['openid', 'profile', 'email'],
+  // Generate the redirect URI with Expo proxy
+  const redirectUri = makeRedirectUri({
+    useProxy: true,  // This creates https://auth.expo.io/@vehem23/spilled
   });
+
+  // Log the redirect URI for debugging
+  console.log('Generated Redirect URI:', redirectUri);
+
+  // Use the Google Auth Request hook with the proxy redirect URI
+  const [request, response, promptAsync] = Google.useAuthRequest({
+    // Use web client ID for all platforms in development
+    webClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
+    // Platform-specific client IDs (use web client ID as fallback)
+    androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
+    iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
+    scopes: ['openid', 'profile', 'email'],
+    redirectUri: redirectUri,  // Explicitly pass the proxy redirect URI
+  });
+
+  // Log the actual request redirect URI for debugging
+  console.log('Request Redirect URI:', request?.redirectUri || 'Not yet generated');
+  // Should log: https://auth.expo.io/@vehem23/spilled
 
   // Handle the authentication response
   useEffect(() => {
@@ -201,6 +215,13 @@ export const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
       );
       return;
     }
+
+    // Debug log the request configuration
+    console.log('OAuth Request Config:', {
+      redirectUri: request.redirectUri,
+      clientId: request.clientId,
+      scopes: request.scopes,
+    });
 
     setLoading(true);
     try {

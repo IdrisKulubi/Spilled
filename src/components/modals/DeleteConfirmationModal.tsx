@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   TouchableWithoutFeedback,
+  ViewStyle,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Colors } from '../../../constants/Colors';
@@ -86,16 +87,18 @@ export const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = (
                   >
                     <Text style={styles.cancelText}>Keep It</Text>
                   </TouchableOpacity>
-
                   <TeaKEButton
                     title={isDeleting ? "Deleting..." : "Yes, Delete"}
                     onPress={onConfirm}
                     disabled={isDeleting}
                     size="small"
-                    style={[styles.deleteButton, { 
-                      backgroundColor: Colors.light.error,
-                      opacity: isDeleting ? 0.6 : 1
-                    }]}
+                    style={StyleSheet.flatten([
+                      styles.deleteButton,
+                      {
+                        backgroundColor: Colors.light.error,
+                        opacity: isDeleting ? 0.6 : 1
+                      }
+                    ]) as ViewStyle}
                   />
                 </View>
               </View>

@@ -7,24 +7,25 @@ import { db } from '../database/connection';
 import { stories, guys, comments, storyReactions } from '../database/schema';
 import { authClient } from '../lib/auth-client';
 import { and, desc, eq, inArray } from 'drizzle-orm';
+import { Database } from '../types/database';
 
 type TagType = Database['public']['Enums']['tag_type'];
 
 export interface StoryFeedItem {
   id: string;
-  guy_id: string;
-  guy_name?: string;
-  guy_phone?: string;  
-  guy_socials?: string;
-  guy_location?: string;
-  guy_age?: number;
+  guy_id: string | null;
+  guy_name?: string | null;
+  guy_phone?: string | null;  
+  guy_socials?: string | null;
+  guy_location?: string | null;
+  guy_age?: number | null;
   user_id: string;
   text: string;
   tags: TagType[];
-  image_url?: string;
+  image_url?: string | null;
   created_at: string;
   anonymous: boolean;
-  nickname?: string;
+  nickname?: string | null;
   comments: StoryComment[];
   comment_count: number;
   reactions: StoryReactions;
@@ -110,18 +111,18 @@ export const fetchStoriesFeed = async (
         return {
           id: story.id,
           guy_id: story.guyId,
-          guy_name: guy?.name,
-          guy_phone: guy?.phone,
-          guy_socials: guy?.socials,
-          guy_location: guy?.location,
-          guy_age: guy?.age,
-          user_id: story.userId,
-          text: story.text,
-          tags: story.tags,
-          image_url: story.imageUrl,
-          created_at: story.createdAt,
-          anonymous: story.anonymous,
-          nickname: story.nickname,
+          guy_name: guy?.name || null,
+          guy_phone: guy?.phone || null,
+          guy_socials: guy?.socials || null,
+          guy_location: guy?.location || null,
+          guy_age: guy?.age || null,
+          user_id: story.userId!,
+          text: story.text!,
+          tags: story.tags || [],
+          image_url: story.imageUrl || null,
+          created_at: story.createdAt!.toISOString(),
+          anonymous: story.anonymous || false,
+          nickname: story.nickname || null,
           comments: [],
           comment_count: commentCount.length,
           reactions: {

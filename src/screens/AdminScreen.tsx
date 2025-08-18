@@ -7,7 +7,6 @@ import {
   View,
   Text,
   SafeAreaView,
-  ScrollView,
   StyleSheet,
   Alert,
   TouchableOpacity,
@@ -17,7 +16,7 @@ import {
 } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
 import { TeaKEStyles, Spacing } from '../constants/Styles';
-import { TeaKEButton, TeaKECard } from '../components/ui';
+import {  TeaKECard } from '../components/ui';
 import { Colors } from '../../constants/Colors';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';

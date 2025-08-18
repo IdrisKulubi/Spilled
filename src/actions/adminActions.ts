@@ -52,7 +52,7 @@ export const fetchPendingVerifications = async (): Promise<{
     });
 
     const pendingVerifications: PendingVerification[] = pendingUsers.data.map((user: User) => {
-      const createdAt = new Date(user.createdAt);
+      const createdAt = user.createdAt ? new Date(user.createdAt) : new Date();
       const now = new Date();
       const daysWaiting = Math.floor((now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
 
@@ -63,7 +63,7 @@ export const fetchPendingVerifications = async (): Promise<{
         phone: user.phone || "",
         id_image_url: user.idImageUrl || "",
         id_type: user.idType || "school_id",
-        created_at: user.createdAt.toISOString(),
+        created_at: user.createdAt ? user.createdAt.toISOString() : "",
         days_waiting: daysWaiting,
       };
     });

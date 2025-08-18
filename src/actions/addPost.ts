@@ -7,8 +7,7 @@
 import { authUtils } from '../utils/auth';
 import { StoryRepository } from '../repositories/StoryRepository';
 import { GuyRepository } from '../repositories/GuyRepository';
-import { or, ilike } from 'drizzle-orm';
-import * as FileSystem from 'expo-file-system';
+
 
 type TagType = "red_flag" | "good_vibes" | "unsure";
 

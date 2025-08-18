@@ -8,6 +8,13 @@
       "when": 1755175770202,
       "tag": "0000_abnormal_captain_stacy",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1755382017869,
+      "tag": "0001_oval_photon",
+      "breakpoints": true
     }
   ]
 }

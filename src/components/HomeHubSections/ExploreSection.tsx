@@ -14,7 +14,7 @@ import {
   Alert 
 } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
-import { TeaKEStyles, Spacing } from '../../constants/Styles';
+import {  Spacing } from '../../constants/Styles';
 import { TeaKECard } from '../../components/ui';
 import { Colors } from '../../../constants/Colors';
 import { MaterialIcons } from '@expo/vector-icons';

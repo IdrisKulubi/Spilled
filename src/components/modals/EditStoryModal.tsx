@@ -21,7 +21,7 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../../contexts/AuthContext';
-import { TeaKEButton, TeaKECard, StatusTag } from '../../components/ui';
+import { TeaKEButton, TeaKECard } from '../../components/ui';
 import { Colors } from '../../../constants/Colors';
 import { Spacing } from '../../constants/Styles';
 import { StoryFeedItem } from '../../actions/fetchStoriesFeed';

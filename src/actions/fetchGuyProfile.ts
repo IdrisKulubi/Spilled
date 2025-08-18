@@ -1,14 +1,13 @@
 /**
  * Fetch Guy Profile Action - Spilled
  * Retrieves guy profiles and associated stories/comments
- * Updated to use Drizzle ORM instead of Supabase
  */
 
 import { GuyRepository } from '../repositories/GuyRepository';
 import { authUtils } from '../utils/auth';
 import { eq, and, or, ilike, sql, desc } from 'drizzle-orm';
 import { db } from '../database/connection';
-import { guys, stories, comments, users } from '../database/schema';
+import { guys, stories, comments} from '../database/schema';
 
 type TagType = "red_flag" | "good_vibes" | "unsure";
 
@@ -168,13 +167,13 @@ export const fetchGuyById = async (guyId: string): Promise<GuyProfile | null> =>
       if (!storiesMap.has(row.storyId)) {
         storiesMap.set(row.storyId, {
           id: row.storyId,
-          user_id: row.storyUserId,
-          text: row.storyText,
-          tags: row.storyTags || [],
-          image_url: row.storyImageUrl,
-          created_at: row.storyCreatedAt.toISOString(),
-          anonymous: row.storyAnonymous,
-          nickname: row.storyNickname,
+          user_id: row.storyUserId ?? '',
+          text: row.storyText ?? '',
+          tags: (row.storyTags ?? []) as TagType[],
+          image_url: row.storyImageUrl ?? undefined,
+          created_at: row.storyCreatedAt ? row.storyCreatedAt.toISOString() : new Date().toISOString(),
+          anonymous: row.storyAnonymous ?? false,
+          nickname: row.storyNickname ?? undefined,
           comments: [],
         });
       }
@@ -184,11 +183,11 @@ export const fetchGuyById = async (guyId: string): Promise<GuyProfile | null> =>
         const story = storiesMap.get(row.storyId)!;
         story.comments.push({
           id: row.commentId,
-          user_id: row.commentUserId,
-          text: row.commentText,
-          created_at: row.commentCreatedAt.toISOString(),
-          anonymous: row.commentAnonymous,
-          nickname: row.commentNickname,
+          user_id: row.commentUserId ?? '',
+          text: row.commentText ?? '',
+          created_at: row.commentCreatedAt ? row.commentCreatedAt.toISOString() : new Date().toISOString(),
+          anonymous: row.commentAnonymous ?? false,
+          nickname: row.commentNickname ?? undefined,
         });
       }
     }
@@ -201,12 +200,12 @@ export const fetchGuyById = async (guyId: string): Promise<GuyProfile | null> =>
     // Format the response
     const guyProfile: GuyProfile = {
       id: guy.id,
-      name: guy.name,
-      phone: guy.phone,
-      socials: guy.socials,
-      location: guy.location,
-      age: guy.age,
-      created_at: guy.createdAt.toISOString(),
+      name: guy.name ?? undefined,
+      phone: guy.phone ?? undefined,
+      socials: guy.socials ?? undefined,
+      location: guy.location ?? undefined,
+      age: guy.age ?? undefined,
+      created_at: (guy.createdAt ?? new Date()).toISOString(),
       stories: storiesArray,
     };
 
@@ -416,12 +415,12 @@ export const searchGuys = async (searchParams: SearchParams): Promise<GuyProfile
     // Return basic guy info with story count
     return searchResults.map(guy => ({
       id: guy.guyId,
-      name: guy.guyName,
-      phone: guy.guyPhone,
-      socials: guy.guySocials,
-      location: guy.guyLocation,
-      age: guy.guyAge,
-      created_at: guy.latestStoryDate || new Date().toISOString(),
+      name: guy.guyName ?? undefined,
+      phone: guy.guyPhone ?? undefined,
+      socials: guy.guySocials ?? undefined,
+      location: guy.guyLocation ?? undefined,
+      age: guy.guyAge ?? undefined,
+      created_at: guy.latestStoryDate ?? new Date().toISOString(),
       stories: [], // Don't load full stories for search results
       story_count: guy.storyCount,
       match_source: guy.matchSource,

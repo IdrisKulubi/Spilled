@@ -14,13 +14,23 @@ import { ProfileCreationScreen } from '../src/screens/ProfileCreationScreen';
 export default function MainApp() {
   const { user, loading } = useAuth();
   
-  // Debug environment variables
+  // Debug environment variables and user state
   React.useEffect(() => {
     console.log('🔍 Environment Variables Debug:');
-    console.log('SUPABASE_URL:', process.env.EXPO_PUBLIC_SUPABASE_URL);
-    console.log('SUPABASE_KEY exists:', !!process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY);
     console.log('DEV_MODE:', process.env.EXPO_PUBLIC_DEV_MODE);
-  }, []);
+    
+    // Debug user object
+    if (user) {
+      console.log('👤 User object:', {
+        id: user.id,
+        email: user.email,
+        createdAt: user.createdAt,
+        created_at: user.createdAt,
+        verified: user.verified,
+        verificationStatus: user.verificationStatus || user.verificationStatus,
+      });
+    }
+  }, [user]);
 
   // If not logged in, show sign in screen
   if (!user) {
@@ -28,7 +38,8 @@ export default function MainApp() {
   }
 
   // If user session exists but no complete database profile, create it
-  const isDatabaseConfirmed = !!user.created_at;
+  // Check if user has a createdAt timestamp which confirms DB record exists
+  const isDatabaseConfirmed = !!user.createdAt || !!user.createdAt;
   if (!isDatabaseConfirmed) {
     return <ProfileCreationScreen />;
   }
@@ -36,23 +47,23 @@ export default function MainApp() {
   // If user is not verified, show verification screens
   if (user && !user.verified) {
     
-    if (user.verification_status === 'pending') {
+    if (user.verificationStatus === 'pending') {
       // Check if user has uploaded an ID
-      const hasUploadedId = user.id_image_url && typeof user.id_image_url === 'string' && user.id_image_url.trim() !== '';
+      const hasUploadedId = user.idImageUrl && typeof user.idImageUrl === 'string' && user.idImageUrl.trim() !== '';
       
       if (hasUploadedId) {
         // Show pending screen
         return <VerificationPendingScreen user={{
           nickname: user.nickname || 'User',
-          verification_status: user.verification_status,
-          id_image_url: user.id_image_url || undefined,
-          id_type: user.id_type || undefined
+          verification_status: user.verificationStatus,
+          id_image_url: user.idImageUrl || undefined,
+          id_type: user.idType || undefined
         }} />;
       } else {
         // Show verification upload screen
         return <VerificationScreen />;
       }
-    } else if (user.verification_status === 'rejected') {
+    } else if (user.verificationStatus === 'rejected') {
       // Show verification screen for rejected users
       return <VerificationScreen />;
     } else {

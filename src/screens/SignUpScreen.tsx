@@ -12,7 +12,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { TeaKEStyles } from "../constants/Styles";
 import { Colors } from "../../constants/Colors";
 import { useAuth } from "../contexts/AuthContext";
-import { GoogleSignInButton } from "../components/GoogleSignInButton";
+import { BetterAuthGoogleButton } from "../components/BetterAuthGoogleButton";
 import { useNavigation } from '@react-navigation/native';
 
 export const SignUpScreen: React.FC = () => {
@@ -86,11 +86,12 @@ export const SignUpScreen: React.FC = () => {
 
         {/* CTA Section */}
         <View style={styles.ctaSection}>
-          <GoogleSignInButton
+          <BetterAuthGoogleButton
             buttonText="Join the sisterhood"
             onSuccess={handleGoogleSignUpSuccess}
             onError={handleGoogleSignUpError}
             isSignUp={true}
+            callbackURL="dashboard"
           />
 
           <Text style={styles.ctaSubtext}>

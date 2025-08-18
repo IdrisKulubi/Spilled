@@ -2,13 +2,20 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { expo } from "@better-auth/expo";
 import { db } from "../database/connection";
-import { users } from "../database/schema";
+import { users, session, account, verification } from "../database/schema";
+
+// Development mode check
+const isDevelopment = process.env.EXPO_PUBLIC_DEV_MODE === 'true';
 
 export const auth = betterAuth({
+  baseURL: process.env.EXPO_PUBLIC_AUTH_BASE_URL || "http://localhost:8081/api/auth",
   database: drizzleAdapter(db, {
     provider: "pg",
     schema: {
       user: users,
+      session: session,
+      account: account,
+      verification: verification,
     },
   }),
   emailAndPassword: {
@@ -24,6 +31,10 @@ export const auth = betterAuth({
   session: {
     expiresIn: 60 * 60 * 24 * 7, // 7 days
     updateAge: 60 * 60 * 24, // 1 day
+    cookieCache: {
+      enabled: true,
+      maxAge: 60 * 5, // 5 minutes
+    },
   },
   user: {
     additionalFields: {
@@ -61,9 +72,14 @@ export const auth = betterAuth({
       },
     },
   },
-  trustedOrigins: [
+  trustedOrigins: isDevelopment ? [
+    "*", // Allow all origins in development for easier testing
+  ] : [
     "spilled://", // App scheme from app.json
     "spilled://*", // Wildcard support for all paths
+    "exp://*", // Expo development URLs
+    "exp://localhost:*", // Expo localhost development  
+    "exp://*/--/*", // Expo deep linking format
   ],
   telemetry: {
     enabled: false, // Disable telemetry
@@ -71,6 +87,7 @@ export const auth = betterAuth({
   plugins: [
     expo({
       overrideOrigin: true, // Set to true if facing CORS issues with Expo API routes
+      trustHost: true, // Trust the host header for generating the callback URL
     }),
   ],
 });

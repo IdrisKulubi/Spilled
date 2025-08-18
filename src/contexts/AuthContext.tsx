@@ -3,12 +3,10 @@
  * Manages user authentication state across the app
  */
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authClient } from '../lib/auth-client';
 import { UserRepository } from '../repositories/UserRepository';
 import { isUserAdmin } from '../config/admin';
-import { useGoogleAuth, handleGoogleSignIn, checkGoogleSession, signOutGoogle } from '../utils/google-auth';
-import * as Google from 'expo-auth-session/providers/google';
 import type { User } from '../database/schema';
 import type { User as BetterAuthUser } from 'better-auth';
 
@@ -59,8 +57,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         dbUser = await userRepository.create({
           id: betterAuthUser.id,
           email: betterAuthUser.email || null,
-          nickname: betterAuthUser.nickname || betterAuthUser.name || betterAuthUser.email?.split('@')[0] || 'User',
-          phone: betterAuthUser.phone || null,
+          nickname:  betterAuthUser.name || betterAuthUser.email?.split('@')[0] || 'User',
           verified: false,
           verificationStatus: 'pending',
           createdAt: new Date(),
@@ -150,6 +147,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (result.data && 'user' in result.data && result.data.user) {
         const dbUser = await getDatabaseUser(result.data.user);
         
+        if (!dbUser) {
+          return {
+            success: false,
+            error: 'Failed to create user profile',
+          };
+        }
+        
         // Update user profile with additional fields if provided
         if (nickname || phone) {
           try {
@@ -157,15 +161,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               nickname: nickname || null,
               phone: phone || null,
             });
-            setUser(updatedUser);
+            if (updatedUser) {
+              setUser(updatedUser);
+              return {
+                success: true,
+                user: updatedUser,
+              };
+            }
           } catch (updateError) {
             console.warn('Failed to update user profile after signup:', updateError);
-            setUser(dbUser);
           }
-        } else {
-          setUser(dbUser);
         }
-
+        
+        setUser(dbUser);
         return {
           success: true,
           user: dbUser,
@@ -204,8 +212,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Check if we have a user in the response
       if (result.data && 'user' in result.data && result.data.user) {
         const dbUser = await getDatabaseUser(result.data.user);
-        setUser(dbUser);
         
+        if (!dbUser) {
+          return {
+            success: false,
+            error: 'Failed to load user profile',
+          };
+        }
+        
+        setUser(dbUser);
         return {
           success: true,
           user: dbUser,

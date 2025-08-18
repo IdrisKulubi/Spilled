@@ -34,7 +34,7 @@ export class CommentRepository extends BaseRepository<Comment, InsertComment> {
   async create(commentData: InsertComment): Promise<Comment> {
     try {
       // Validate required fields
-      ErrorHandler.validateRequired(commentData, ['content', 'storyId', 'createdByUserId']);
+      ErrorHandler.validateRequired(commentData, ['text', 'storyId', 'userId']);
       
       // Validate that the story exists
       if (commentData.storyId) {
@@ -52,27 +52,27 @@ export class CommentRepository extends BaseRepository<Comment, InsertComment> {
       }
       
       // Validate that the creating user exists
-      if (commentData.createdByUserId) {
-        ErrorHandler.validateUUID(commentData.createdByUserId);
+      if (commentData.userId) {
+        ErrorHandler.validateUUID(commentData.userId);
         
         const userExists = await db
           .select({ id: users.id })
           .from(users)
-          .where(eq(users.id, commentData.createdByUserId))
+          .where(eq(users.id, commentData.userId))
           .limit(1);
         
         if (!userExists.length) {
-          throw new ValidationError("Creating user does not exist", "createdByUserId");
+          throw new ValidationError("Creating user does not exist", "userId");
         }
       }
       
       // Validate content length
-      if (commentData.content && commentData.content.length > 500) {
-        throw new ValidationError("Comment content cannot exceed 500 characters", "content");
+      if (commentData.text && commentData.text.length > 500) {
+        throw new ValidationError("Comment content cannot exceed 500 characters", "text");
       }
       
-      if (commentData.content && commentData.content.trim().length === 0) {
-        throw new ValidationError("Comment content cannot be empty", "content");
+      if (commentData.text && commentData.text.trim().length === 0) {
+        throw new ValidationError("Comment content cannot be empty", "text");
       }
       
       return await super.create(commentData);
@@ -92,13 +92,13 @@ export class CommentRepository extends BaseRepository<Comment, InsertComment> {
       ErrorHandler.validateUUID(id);
       
       // Validate content length if being updated
-      if (updates.content) {
-        if (updates.content.length > 500) {
-          throw new ValidationError("Comment content cannot exceed 500 characters", "content");
+      if (updates.text) {
+        if (updates.text.length > 500) {
+          throw new ValidationError("Comment content cannot exceed 500 characters", "text");
         }
         
-        if (updates.content.trim().length === 0) {
-          throw new ValidationError("Comment content cannot be empty", "content");
+        if (updates.text.trim().length === 0) {
+          throw new ValidationError("Comment content cannot be empty", "text");
         }
       }
       
@@ -131,17 +131,20 @@ export class CommentRepository extends BaseRepository<Comment, InsertComment> {
       
       if (search) {
         const searchCondition = or(
-          ilike(comments.content, `%${search}%`),
+          ilike(comments.text, `%${search}%`),
           ilike(users.nickname, `%${search}%`)
         );
-        whereCondition = and(whereCondition, searchCondition);
+        const combined = and(whereCondition, searchCondition);
+        if (combined) {
+          whereCondition = combined;
+        }
       }
       
       // Get total count
       const totalResult = await db
         .select({ count: sql`count(*)` })
         .from(comments)
-        .innerJoin(users, eq(comments.createdByUserId, users.id))
+        .innerJoin(users, eq(comments.userId, users.id))
         .innerJoin(stories, eq(comments.storyId, stories.id))
         .where(whereCondition);
       
@@ -155,15 +158,20 @@ export class CommentRepository extends BaseRepository<Comment, InsertComment> {
         .select({
           // Comment fields
           id: comments.id,
-          content: comments.content,
+          text: comments.text,
           storyId: comments.storyId,
-          createdByUserId: comments.createdByUserId,
+          userId: comments.userId,
+          anonymous: comments.anonymous,
+          nickname: comments.nickname,
           createdAt: comments.createdAt,
           // User fields
           user: {
             id: users.id,
+            name: users.name,
             phone: users.phone,
             email: users.email,
+            emailVerified: users.emailVerified,
+            image: users.image,
             nickname: users.nickname,
             verified: users.verified,
             verificationStatus: users.verificationStatus,
@@ -172,20 +180,23 @@ export class CommentRepository extends BaseRepository<Comment, InsertComment> {
             rejectionReason: users.rejectionReason,
             verifiedAt: users.verifiedAt,
             createdAt: users.createdAt,
+            updatedAt: users.updatedAt,
           },
           // Story fields
           story: {
             id: stories.id,
-            content: stories.content,
-            imageUrl: stories.imageUrl,
-            tagType: stories.tagType,
             guyId: stories.guyId,
-            createdByUserId: stories.createdByUserId,
+            userId: stories.userId,
+            text: stories.text,
+            tags: stories.tags,
+            imageUrl: stories.imageUrl,
+            anonymous: stories.anonymous,
+            nickname: stories.nickname,
             createdAt: stories.createdAt,
           },
         })
         .from(comments)
-        .innerJoin(users, eq(comments.createdByUserId, users.id))
+        .innerJoin(users, eq(comments.userId, users.id))
         .innerJoin(stories, eq(comments.storyId, stories.id))
         .where(whereCondition)
         .limit(validLimit)
@@ -195,9 +206,11 @@ export class CommentRepository extends BaseRepository<Comment, InsertComment> {
       // Transform the result to match CommentWithDetails interface
       const transformedResult: CommentWithDetails[] = result.map(row => ({
         id: row.id,
-        content: row.content,
+        text: row.text,
         storyId: row.storyId,
-        createdByUserId: row.createdByUserId,
+        userId: row.userId,
+        anonymous: row.anonymous,
+        nickname: row.nickname,
         createdAt: row.createdAt,
         user: row.user as User,
         story: row.story as Story,
@@ -220,10 +233,10 @@ export class CommentRepository extends BaseRepository<Comment, InsertComment> {
       const { limit: validLimit, offset } = QueryBuilder.pagination(page, limit);
       
       // Build where conditions
-      const conditions: any[] = [eq(comments.createdByUserId, userId)];
+      const conditions: any[] = [eq(comments.userId, userId)];
       
       if (search) {
-        conditions.push(ilike(comments.content, `%${search}%`));
+        conditions.push(ilike(comments.text, `%${search}%`));
       }
       
       if (startDate || endDate) {
@@ -239,7 +252,7 @@ export class CommentRepository extends BaseRepository<Comment, InsertComment> {
       const totalResult = await db
         .select({ count: sql`count(*)` })
         .from(comments)
-        .innerJoin(users, eq(comments.createdByUserId, users.id))
+        .innerJoin(users, eq(comments.userId, users.id))
         .innerJoin(stories, eq(comments.storyId, stories.id))
         .where(whereCondition);
       
@@ -250,15 +263,20 @@ export class CommentRepository extends BaseRepository<Comment, InsertComment> {
         .select({
           // Comment fields
           id: comments.id,
-          content: comments.content,
+          text: comments.text,
           storyId: comments.storyId,
-          createdByUserId: comments.createdByUserId,
+          userId: comments.userId,
+          anonymous: comments.anonymous,
+          nickname: comments.nickname,
           createdAt: comments.createdAt,
           // User fields
           user: {
             id: users.id,
+            name: users.name,
             phone: users.phone,
             email: users.email,
+            emailVerified: users.emailVerified,
+            image: users.image,
             nickname: users.nickname,
             verified: users.verified,
             verificationStatus: users.verificationStatus,
@@ -267,20 +285,23 @@ export class CommentRepository extends BaseRepository<Comment, InsertComment> {
             rejectionReason: users.rejectionReason,
             verifiedAt: users.verifiedAt,
             createdAt: users.createdAt,
+            updatedAt: users.updatedAt,
           },
           // Story fields
           story: {
             id: stories.id,
-            content: stories.content,
-            imageUrl: stories.imageUrl,
-            tagType: stories.tagType,
             guyId: stories.guyId,
-            createdByUserId: stories.createdByUserId,
+            userId: stories.userId,
+            text: stories.text,
+            tags: stories.tags,
+            imageUrl: stories.imageUrl,
+            anonymous: stories.anonymous,
+            nickname: stories.nickname,
             createdAt: stories.createdAt,
           },
         })
         .from(comments)
-        .innerJoin(users, eq(comments.createdByUserId, users.id))
+        .innerJoin(users, eq(comments.userId, users.id))
         .innerJoin(stories, eq(comments.storyId, stories.id))
         .where(whereCondition)
         .limit(validLimit)
@@ -290,9 +311,11 @@ export class CommentRepository extends BaseRepository<Comment, InsertComment> {
       // Transform the result to match CommentWithDetails interface
       const transformedResult: CommentWithDetails[] = result.map(row => ({
         id: row.id,
-        content: row.content,
+        text: row.text,
         storyId: row.storyId,
-        createdByUserId: row.createdByUserId,
+        userId: row.userId,
+        anonymous: row.anonymous,
+        nickname: row.nickname,
         createdAt: row.createdAt,
         user: row.user as User,
         story: row.story as Story,
@@ -315,15 +338,20 @@ export class CommentRepository extends BaseRepository<Comment, InsertComment> {
         .select({
           // Comment fields
           id: comments.id,
-          content: comments.content,
+          text: comments.text,
           storyId: comments.storyId,
-          createdByUserId: comments.createdByUserId,
+          userId: comments.userId,
+          anonymous: comments.anonymous,
+          nickname: comments.nickname,
           createdAt: comments.createdAt,
           // User fields
           user: {
             id: users.id,
+            name: users.name,
             phone: users.phone,
             email: users.email,
+            emailVerified: users.emailVerified,
+            image: users.image,
             nickname: users.nickname,
             verified: users.verified,
             verificationStatus: users.verificationStatus,
@@ -332,20 +360,23 @@ export class CommentRepository extends BaseRepository<Comment, InsertComment> {
             rejectionReason: users.rejectionReason,
             verifiedAt: users.verifiedAt,
             createdAt: users.createdAt,
+            updatedAt: users.updatedAt,
           },
           // Story fields
           story: {
             id: stories.id,
-            content: stories.content,
-            imageUrl: stories.imageUrl,
-            tagType: stories.tagType,
             guyId: stories.guyId,
-            createdByUserId: stories.createdByUserId,
+            userId: stories.userId,
+            text: stories.text,
+            tags: stories.tags,
+            imageUrl: stories.imageUrl,
+            anonymous: stories.anonymous,
+            nickname: stories.nickname,
             createdAt: stories.createdAt,
           },
         })
         .from(comments)
-        .innerJoin(users, eq(comments.createdByUserId, users.id))
+        .innerJoin(users, eq(comments.userId, users.id))
         .innerJoin(stories, eq(comments.storyId, stories.id))
         .limit(validLimit)
         .orderBy(desc(comments.createdAt));
@@ -353,9 +384,11 @@ export class CommentRepository extends BaseRepository<Comment, InsertComment> {
       // Transform the result to match CommentWithDetails interface
       return result.map(row => ({
         id: row.id,
-        content: row.content,
+        text: row.text,
         storyId: row.storyId,
-        createdByUserId: row.createdByUserId,
+        userId: row.userId,
+        anonymous: row.anonymous,
+        nickname: row.nickname,
         createdAt: row.createdAt,
         user: row.user as User,
         story: row.story as Story,
@@ -436,7 +469,7 @@ export class CommentRepository extends BaseRepository<Comment, InsertComment> {
       // Build where conditions
       const conditions: any[] = [
         or(
-          ilike(comments.content, `%${searchTerm}%`),
+          ilike(comments.text, `%${searchTerm}%`),
           ilike(users.nickname, `%${searchTerm}%`)
         )
       ];
@@ -454,7 +487,7 @@ export class CommentRepository extends BaseRepository<Comment, InsertComment> {
       const totalResult = await db
         .select({ count: sql`count(*)` })
         .from(comments)
-        .innerJoin(users, eq(comments.createdByUserId, users.id))
+        .innerJoin(users, eq(comments.userId, users.id))
         .innerJoin(stories, eq(comments.storyId, stories.id))
         .where(whereCondition);
       
@@ -465,15 +498,20 @@ export class CommentRepository extends BaseRepository<Comment, InsertComment> {
         .select({
           // Comment fields
           id: comments.id,
-          content: comments.content,
+          text: comments.text,
           storyId: comments.storyId,
-          createdByUserId: comments.createdByUserId,
+          userId: comments.userId,
+          anonymous: comments.anonymous,
+          nickname: comments.nickname,
           createdAt: comments.createdAt,
           // User fields
           user: {
             id: users.id,
+            name: users.name,
             phone: users.phone,
             email: users.email,
+            emailVerified: users.emailVerified,
+            image: users.image,
             nickname: users.nickname,
             verified: users.verified,
             verificationStatus: users.verificationStatus,
@@ -482,20 +520,23 @@ export class CommentRepository extends BaseRepository<Comment, InsertComment> {
             rejectionReason: users.rejectionReason,
             verifiedAt: users.verifiedAt,
             createdAt: users.createdAt,
+            updatedAt: users.updatedAt,
           },
           // Story fields
           story: {
             id: stories.id,
-            content: stories.content,
-            imageUrl: stories.imageUrl,
-            tagType: stories.tagType,
             guyId: stories.guyId,
-            createdByUserId: stories.createdByUserId,
+            userId: stories.userId,
+            text: stories.text,
+            tags: stories.tags,
+            imageUrl: stories.imageUrl,
+            anonymous: stories.anonymous,
+            nickname: stories.nickname,
             createdAt: stories.createdAt,
           },
         })
         .from(comments)
-        .innerJoin(users, eq(comments.createdByUserId, users.id))
+        .innerJoin(users, eq(comments.userId, users.id))
         .innerJoin(stories, eq(comments.storyId, stories.id))
         .where(whereCondition)
         .limit(validLimit)
@@ -505,9 +546,11 @@ export class CommentRepository extends BaseRepository<Comment, InsertComment> {
       // Transform the result to match CommentWithDetails interface
       const transformedResult: CommentWithDetails[] = result.map(row => ({
         id: row.id,
-        content: row.content,
+        text: row.text,
         storyId: row.storyId,
-        createdByUserId: row.createdByUserId,
+        userId: row.userId,
+        anonymous: row.anonymous,
+        nickname: row.nickname,
         createdAt: row.createdAt,
         user: row.user as User,
         story: row.story as Story,
@@ -558,7 +601,7 @@ export class CommentRepository extends BaseRepository<Comment, InsertComment> {
             commentCount: sql<number>`count(${comments.id})`,
           })
           .from(comments)
-          .innerJoin(users, eq(comments.createdByUserId, users.id))
+          .innerJoin(users, eq(comments.userId, users.id))
           .groupBy(users.id, users.nickname)
           .orderBy(desc(sql`count(${comments.id})`))
           .limit(5),
@@ -590,7 +633,7 @@ export class CommentRepository extends BaseRepository<Comment, InsertComment> {
       const result = await db
         .select({ id: comments.id })
         .from(comments)
-        .where(and(eq(comments.id, commentId), eq(comments.createdByUserId, userId)))
+        .where(and(eq(comments.id, commentId), eq(comments.userId, userId)))
         .limit(1);
       
       return result.length > 0;

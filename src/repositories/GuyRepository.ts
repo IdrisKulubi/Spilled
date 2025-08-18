@@ -147,7 +147,8 @@ export class GuyRepository extends BaseRepository<Guy, InsertGuy> {
           ilike(guys.location, `%${search}%`),
           ilike(guys.socials, `%${search}%`)
         );
-        whereCondition = and(whereCondition, searchCondition);
+        const combined = and(whereCondition, searchCondition);
+        whereCondition = combined ?? whereCondition;
       }
       
       // Get total count
@@ -222,7 +223,7 @@ export class GuyRepository extends BaseRepository<Guy, InsertGuy> {
           ilike(guys.phone, `%${search}%`),
           ilike(guys.location, `%${search}%`),
           ilike(guys.socials, `%${search}%`)
-        );
+        ) ?? sql`1=1`;
       }
       
       // Get total count

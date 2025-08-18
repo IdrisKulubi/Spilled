@@ -4,7 +4,6 @@ import {
   users,
   User,
   InsertUser,
-  verificationStatusEnum,
 } from "../database/schema";
 import {
   ErrorHandler,

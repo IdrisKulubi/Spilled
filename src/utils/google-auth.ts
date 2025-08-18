@@ -6,6 +6,7 @@
 import * as Google from 'expo-auth-session/providers/google';
 import * as WebBrowser from 'expo-web-browser';
 import * as SecureStore from 'expo-secure-store';
+import { makeRedirectUri } from 'expo-auth-session';
 import { Platform } from 'react-native';
 import { authClient } from '../lib/auth-client';
 import { authUtils } from './auth';
@@ -43,6 +44,10 @@ export function useGoogleAuth() {
     iosClientId: GOOGLE_CONFIG.iosClientId,
     webClientId: GOOGLE_CONFIG.webClientId,
     scopes: GOOGLE_CONFIG.scopes,
+    // Use Expo proxy for OAuth redirect in development
+    redirectUri: makeRedirectUri({
+      useProxy: true,
+    }),
   });
 
   return {
