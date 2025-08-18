@@ -27,15 +27,7 @@ import {
   ChatHistory,
   MessageResponse
 } from '../actions/sendMessage';
-
-interface Message {
-  id: string;
-  sender_id: string;
-  receiver_id: string;
-  text: string;
-  created_at: string;
-  expires_at: string;
-}
+import { Message } from '../database/schema';
 
 interface ChatScreenProps {
   otherUserId?: string;
@@ -52,7 +44,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = () => {
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
-  const [otherUser, setOtherUser] = useState<{ id: string; nickname: string } | null>(null);
+  const [otherUser, setOtherUser] = useState<{ id: string; nickname?: string } | null>(null);
 
   const otherUserId = params.userId;
   const otherUserNickname = params.nickname || 'User';
@@ -162,19 +154,20 @@ export const ChatScreen: React.FC<ChatScreenProps> = () => {
   };
 
   const isMessageFromCurrentUser = (message: Message): boolean => {
-    return message.sender_id === user?.id;
+    return message.senderId === user?.id;
   };
 
   const renderMessage = ({ item, index }: { item: Message; index: number }) => {
     const isFromMe = isMessageFromCurrentUser(item);
-    const showTime = index === 0 || 
-      (new Date(item.created_at).getTime() - new Date(messages[index - 1].created_at).getTime()) > 5 * 60 * 1000; // 5 minutes
+    const itemCreatedAt = item.createdAt ? new Date(item.createdAt).getTime() : 0;
+    const prevItemCreatedAt = messages[index - 1]?.createdAt ? new Date(messages[index - 1].createdAt!).getTime() : 0;
+    const showTime = index === 0 || (itemCreatedAt - prevItemCreatedAt) > 5 * 60 * 1000; // 5 minutes
 
     return (
       <View style={styles.messageContainer}>
-        {showTime && (
+        {showTime && item.createdAt && (
           <Text style={styles.messageTime}>
-            {formatMessageTime(item.created_at)}
+            {formatMessageTime(item.createdAt.toISOString())}
           </Text>
         )}
         <View style={[
@@ -185,7 +178,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = () => {
             styles.messageText,
             isFromMe ? styles.myMessageText : styles.theirMessageText
           ]}>
-            {item.text}
+            {item.text || ''}
           </Text>
         </View>
       </View>

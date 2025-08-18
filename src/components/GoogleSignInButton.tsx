@@ -18,10 +18,9 @@ import * as WebBrowser from 'expo-web-browser';
 import * as SecureStore from 'expo-secure-store';
 import { makeRedirectUri } from 'expo-auth-session';
 import { Colors } from '../../constants/Colors';
-import { useAuth } from '../contexts/AuthContext';
 import { UserRepository } from '../repositories/UserRepository';
 import { isUserAdmin } from '../config/admin';
-import { v4 as uuidv4 } from 'react-native-uuid';
+import uuid from 'react-native-uuid';
 
 // Ensure web browser sessions complete properly
 WebBrowser.maybeCompleteAuthSession();
@@ -42,15 +41,16 @@ export const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
   const [loading, setLoading] = useState(false);
   const userRepository = new UserRepository();
 
-  // Generate the redirect URI with Expo proxy
+  // Generate the redirect URI based on the environment
   const redirectUri = makeRedirectUri({
-    useProxy: true,  // This creates https://auth.expo.io/@vehem23/spilled
+    scheme: 'spilled',
+    path: 'redirect',
   });
 
   // Log the redirect URI for debugging
-  console.log('Generated Redirect URI:', redirectUri);
+  console.log('OAuth Redirect URI:', redirectUri);
 
-  // Use the Google Auth Request hook with the proxy redirect URI
+  // Use the Google Auth Request hook
   const [request, response, promptAsync] = Google.useAuthRequest({
     // Use web client ID for all platforms in development
     webClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
@@ -58,12 +58,8 @@ export const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
     androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
     iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
     scopes: ['openid', 'profile', 'email'],
-    redirectUri: redirectUri,  // Explicitly pass the proxy redirect URI
+    redirectUri: redirectUri,
   });
-
-  // Log the actual request redirect URI for debugging
-  console.log('Request Redirect URI:', request?.redirectUri || 'Not yet generated');
-  // Should log: https://auth.expo.io/@vehem23/spilled
 
   // Handle the authentication response
   useEffect(() => {
@@ -116,7 +112,7 @@ export const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
       console.log('Google User Info:', googleUser);
 
       // Generate a unique ID for the user if not provided
-      const userId = googleUser.id || uuidv4();
+      const userId = googleUser.id || String(uuid.v4());
 
       // Store tokens securely
       await SecureStore.setItemAsync('google_access_token', authentication.accessToken);
