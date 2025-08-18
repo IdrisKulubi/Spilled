@@ -43,9 +43,9 @@ export const messagingUtils = {
       // Check if user is verified
       if (currentUser.verificationStatus !== "approved") {
         const statusMessage =
-          currentUser.verification_status === "pending"
+          currentUser.verificationStatus === "pending"
             ? "Your verification is still pending. Please wait for approval."
-            : currentUser.verification_status === "rejected"
+            : currentUser.verificationStatus === "rejected"
             ? "Your verification was rejected. Please re-upload your ID."
             : "Please verify your identity by uploading your ID to send messages.";
 

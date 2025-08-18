@@ -4,20 +4,13 @@ import {
   Text,
   SafeAreaView,
   Alert,
-  TouchableOpacity,
-  ActivityIndicator,
   ScrollView,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 import { TeaKEStyles } from "../constants/Styles";
 import { Colors } from "../../constants/Colors";
-import { useAuth } from "../contexts/AuthContext";
 import { BetterAuthGoogleButton } from "../components/BetterAuthGoogleButton";
-import { useNavigation } from '@react-navigation/native';
 
 export const SignUpScreen: React.FC = () => {
-  const [loading, setLoading] = useState(false);
-  const navigation = useNavigation();
 
   const handleGoogleSignUpSuccess = (user: any) => {
     console.log('Sign-up successful:', user);

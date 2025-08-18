@@ -232,7 +232,7 @@ export async function testCompleteStoryImageWorkflow(
     console.log('✓ Image uploaded:', uploadResult.imageUrl);
 
     // Step 3: Test image update (replace with same image)
-    const updateResult = await updateStoryImage(testImageUri, uploadResult.imageUrl, mockStoryId);
+    const updateResult = await updateStoryImage(testImageUri, uploadResult.imageUrl ?? null, mockStoryId);
     if (!updateResult.success) {
       return {
         success: false,

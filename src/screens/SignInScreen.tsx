@@ -5,14 +5,11 @@ import {
   SafeAreaView,
   Alert,
   TouchableOpacity,
-  ActivityIndicator,
   ScrollView,
   Modal,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 import { TeaKEStyles } from "../constants/Styles";
 import { Colors } from "../../constants/Colors";
-import { useAuth } from "../contexts/AuthContext";
 import { BetterAuthGoogleButton } from '../components/BetterAuthGoogleButton';
 import { useNavigation } from '@react-navigation/native';
 

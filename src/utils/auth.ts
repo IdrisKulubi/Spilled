@@ -6,7 +6,6 @@
 import { authClient } from "../lib/auth-client";
 import { UserRepository } from "../repositories/UserRepository";
 import type { User } from "../database/schema";
-import * as FileSystem from "expo-file-system";
 import { uploadImageToR2, deleteImageFromR2, validateImageFile } from "./imageUpload";
 
 // Initialize repository
