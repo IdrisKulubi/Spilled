@@ -2,15 +2,16 @@
   "functions": {
     "api/**/*.ts": {
       "maxDuration": 30
-    },
-    "api/auth/[...all].ts": {
-      "maxDuration": 30
     }
   },
   "rewrites": [
     {
+      "source": "/api/auth",
+      "destination": "/api/auth/index"
+    },
+    {
       "source": "/api/auth/(.*)",
-      "destination": "/api/auth/[...all]?path=$1"
+      "destination": "/api/auth/index"
     },
     {
       "source": "/api/(.*)",

@@ -116,17 +116,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     });
 
-    // Convert Vercel request/response to standard format for Better Auth
-    const request = new Request(
-      `${process.env.BETTER_AUTH_URL || 'https://spilled-kappa.vercel.app'}${req.url}`,
-      {
-        method: req.method || 'GET',
-        headers: req.headers as HeadersInit,
-        body: req.method !== 'GET' && req.method !== 'HEAD' 
-          ? JSON.stringify(req.body) 
-          : undefined,
-      }
-    );
+    // Construct the full URL for Better Auth
+    const url = new URL(req.url || '/', `https://${req.headers.host || 'spilled-kappa.vercel.app'}`);
+    
+    // Convert Vercel request to standard Request for Better Auth
+    const request = new Request(url.toString(), {
+      method: req.method || 'GET',
+      headers: req.headers as HeadersInit,
+      body: req.method !== 'GET' && req.method !== 'HEAD' 
+        ? JSON.stringify(req.body) 
+        : undefined,
+    });
 
     // Handle the request with Better Auth
     const response = await auth.handler(request);
@@ -137,13 +137,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       statusText: response.statusText,
     });
 
-    // Convert Better Auth response to Vercel response
-    const responseHeaders: Record<string, string> = {};
-    response.headers.forEach((value, key) => {
-      responseHeaders[key] = value;
-    });
-
-    // Ensure CORS headers are set
+    // Set CORS headers
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
@@ -157,8 +151,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(200).end();
     }
 
-    // Set response headers from Better Auth
-    Object.entries(responseHeaders).forEach(([key, value]) => {
+    // Copy headers from Better Auth response
+    response.headers.forEach((value, key) => {
       if (!key.toLowerCase().startsWith('access-control-')) {
         res.setHeader(key, value);
       }
