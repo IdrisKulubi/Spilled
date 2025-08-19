@@ -41,33 +41,9 @@ railway login
 railway deploy
 ```
 
-## Configuration Steps
 
-### 1. Update Production Environment Variables
 
-Create a `.env.production.local` file (or set environment variables in your hosting platform):
 
-```env
-# Replace 'yourdomain.com' with your actual production domain
-EXPO_PUBLIC_AUTH_BASE_URL=https://yourdomain.com/api/auth
-EXPO_PUBLIC_GOOGLE_CLIENT_ID=445150503853-2iv13uvpmn25sodofd8sp4t7maq2ov04.apps.googleusercontent.com
-EXPO_PUBLIC_GOOGLE_CLIENT_SECRET=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
-
-# Keep your existing database URL (already production-ready)
-EXPO_PUBLIC_DATABASE_URL='postgresql://neondb_owner:npg_oegT8UIfG5Kp@ep-damp-fog-ae43kx5a-pooler.c-2.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require'
-
-# Keep your existing R2 configuration
-EXPO_PUBLIC_R2_ACCOUNT_ID="023fc4c0a641a20720a0f76d4b58b57f"
-EXPO_PUBLIC_R2_ACCESS_KEY_ID="4ab51d9e43d0233e44e397bf5ba234cb"
-EXPO_PUBLIC_R2_SECRET_ACCESS_KEY="f249c5bf4a6da2ff625a1019be0155a19bf561aba4bd2389f32afe3b44584138"
-EXPO_PUBLIC_R2_BUCKET_NAME="genzjob"
-EXPO_PUBLIC_R2_ENDPOINT="https://023fc4c0a641a20720a0f76d4b58b57f.r2.cloudflarestorage.com"
-EXPO_PUBLIC_R2_PUBLIC_URL="https://pub-bc40211372a8488d898a472d44e9f9a5.r2.dev"
-
-# Production settings
-EXPO_PUBLIC_DEV_MODE=false
-EXPO_PUBLIC_ADMIN_EMAIL=kulubiidris@gmail.com
-```
 
 ### 2. Update Google Cloud Console
 
