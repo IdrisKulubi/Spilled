@@ -8,6 +8,7 @@ import * as WebBrowser from 'expo-web-browser';
 import * as SecureStore from 'expo-secure-store';
 import { makeRedirectUri } from 'expo-auth-session';
 import { Platform } from 'react-native';
+import type { AuthRequest, TokenResponse } from 'expo-auth-session';
 import { authClient } from '../lib/auth-client';
 import { authUtils } from './auth';
 import type { User } from '../database/schema';
@@ -44,9 +45,9 @@ export function useGoogleAuth() {
     iosClientId: GOOGLE_CONFIG.iosClientId,
     webClientId: GOOGLE_CONFIG.webClientId,
     scopes: GOOGLE_CONFIG.scopes,
-    // Use Expo proxy for OAuth redirect in development
+    // Use custom redirect URI for OAuth
     redirectUri: makeRedirectUri({
-      useProxy: true,
+      scheme: 'spilled',
     }),
   });
 
@@ -61,7 +62,7 @@ export function useGoogleAuth() {
  * Handle Google OAuth response and create/update user
  */
 export async function handleGoogleSignIn(
-  authentication: Google.TokenResponse
+  authentication: TokenResponse
 ): Promise<GoogleAuthResult> {
   try {
     if (!authentication?.idToken) {

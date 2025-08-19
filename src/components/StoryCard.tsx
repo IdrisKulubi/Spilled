@@ -215,16 +215,16 @@ export const StoryCard: React.FC<StoryCardProps> = ({
     setIsUpdating(true);
     try {
       const updateData: UpdateStoryData = {
-        guyName: updatedStory.guy_name,
-        guyPhone: updatedStory.guy_phone,
-        guySocials: updatedStory.guy_socials,
-        guyLocation: updatedStory.guy_location,
-        guyAge: updatedStory.guy_age,
+        guyName: updatedStory.guy_name || undefined,
+        guyPhone: updatedStory.guy_phone || undefined,
+        guySocials: updatedStory.guy_socials || undefined,
+        guyLocation: updatedStory.guy_location || undefined,
+        guyAge: updatedStory.guy_age || undefined,
         storyText: updatedStory.text,
         tags: updatedStory.tags,
-        imageUrl: updatedStory.image_url,
+        imageUrl: updatedStory.image_url || undefined,
         anonymous: updatedStory.anonymous,
-        nickname: updatedStory.nickname
+        nickname: updatedStory.nickname || undefined
       };
 
       const response = await updateStory(story.id, user.id, updateData);
@@ -424,7 +424,7 @@ export const StoryCard: React.FC<StoryCardProps> = ({
       <UserProfileModal
         visible={profileModalVisible}
         userId={story.user_id}
-        nickname={story.nickname}
+        nickname={story.nickname || undefined}
         isAnonymous={story.anonymous}
         onClose={handleCloseProfileModal}
       />
