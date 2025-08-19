@@ -16,21 +16,48 @@ export default function MainApp() {
   
   // Debug environment variables and user state
   React.useEffect(() => {
-    console.log('🔍 Environment Variables Debug:');
+    console.log('🔍 Main App Debug - Environment Variables:');
     console.log('DEV_MODE:', process.env.EXPO_PUBLIC_DEV_MODE);
+    console.log('AUTH_BASE_URL:', process.env.EXPO_PUBLIC_AUTH_BASE_URL);
     
-    // Debug user object
+    // Debug user object and flow
+    console.log('📱 App Navigation State:');
+    console.log('User loading:', loading);
+    console.log('User exists:', !!user);
+    
     if (user) {
-      console.log('👤 User object:', {
+      console.log('👤 User Details:', {
         id: user.id,
         email: user.email,
+        nickname: user.nickname,
         createdAt: user.createdAt,
-        created_at: user.createdAt,
         verified: user.verified,
-        verificationStatus: user.verificationStatus || user.verificationStatus,
+        verificationStatus: user.verificationStatus,
+        idImageUrl: user.idImageUrl ? 'present' : 'missing',
+        idType: user.idType,
       });
+      
+      // Determine which screen should be shown
+      const isDatabaseConfirmed = !!user.createdAt;
+      console.log('🏗️ Navigation Decision:');
+      console.log('Database confirmed:', isDatabaseConfirmed);
+      
+      if (isDatabaseConfirmed) {
+        if (user.verified) {
+          console.log('➡️ Should show: HomeHubScreen (verified user)');
+        } else if (user.verificationStatus === 'pending') {
+          const hasUploadedId = user.idImageUrl && typeof user.idImageUrl === 'string' && user.idImageUrl.trim() !== '';
+          console.log('➡️ Should show:', hasUploadedId ? 'VerificationPendingScreen' : 'VerificationScreen');
+        } else {
+          console.log('➡️ Should show: VerificationScreen (unverified)');
+        }
+      } else {
+        console.log('➡️ Should show: ProfileCreationScreen (no database record)');
+      }
+    } else {
+      console.log('➡️ Should show: SignInScreen (no user)');
     }
-  }, [user]);
+  }, [user, loading]);
 
   // If not logged in, show sign in screen
   if (!user) {

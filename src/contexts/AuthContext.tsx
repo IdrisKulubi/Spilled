@@ -24,6 +24,7 @@ interface AuthContextType {
   getVerificationStatus: () => Promise<{ status: 'pending' | 'approved' | 'rejected'; reason?: string } | null>;
   canUserPost: () => Promise<boolean>;
   ensureProfileExists: () => Promise<boolean>;
+  refreshSession: () => Promise<{ success: boolean; user?: User | null; error?: string }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -102,10 +103,35 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     checkUser();
 
-    // Better Auth doesn't have onSessionChange, so we'll use a different approach
-    // For now, we'll rely on the initial check and manual updates
-    // TODO: Implement proper session change listening when Better Auth supports it
-  }, []);
+    // Poll for session changes (useful for OAuth callbacks)
+    // This helps catch the session after OAuth redirect
+    const pollInterval = setInterval(async () => {
+      if (!user) {
+        try {
+          const sessionResult = await authClient.getSession();
+          if (sessionResult.data?.user) {
+            console.log('[AuthContext] Session detected via polling');
+            const dbUser = await getDatabaseUser(sessionResult.data.user);
+            setUser(dbUser);
+            
+            // Check if user is admin
+            if (sessionResult.data.user.email) {
+              const adminStatus = isUserAdmin(sessionResult.data.user.email);
+              setIsAdmin(adminStatus);
+            }
+            
+            // Stop polling once we have a user
+            clearInterval(pollInterval);
+          }
+        } catch (error) {
+          // Silently ignore polling errors
+        }
+      }
+    }, 2000); // Poll every 2 seconds
+
+    // Clean up polling on unmount
+    return () => clearInterval(pollInterval);
+  }, [user]);
 
   const signInWithGoogle = async () => {
     // This method needs to be called from a component that uses the hook
@@ -399,6 +425,50 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  // Refresh session - useful after OAuth callbacks
+  const refreshSession = async (): Promise<{ success: boolean; user?: User | null; error?: string }> => {
+    try {
+      console.log('Refreshing session...');
+      
+      // Get current session from Better Auth
+      const sessionResult = await authClient.getSession();
+      
+      if (sessionResult.data?.user) {
+        console.log('Session found, getting database user...');
+        const dbUser = await getDatabaseUser(sessionResult.data.user);
+        
+        if (dbUser) {
+          setUser(dbUser);
+          
+          // Check admin status
+          if (sessionResult.data.user.email) {
+            const adminStatus = isUserAdmin(sessionResult.data.user.email);
+            setIsAdmin(adminStatus);
+          } else {
+            setIsAdmin(false);
+          }
+          
+          console.log('Session refreshed successfully:', dbUser);
+          return { success: true, user: dbUser };
+        } else {
+          console.error('Failed to get database user');
+          return { success: false, error: 'Failed to get user profile from database' };
+        }
+      } else {
+        console.log('No session found');
+        setUser(null);
+        setIsAdmin(false);
+        return { success: true, user: null };
+      }
+    } catch (error) {
+      console.error('Error refreshing session:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to refresh session'
+      };
+    }
+  };
+
   const value: AuthContextType = {
     user,
     loading,
@@ -413,6 +483,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     getVerificationStatus,
     canUserPost,
     ensureProfileExists,
+    refreshSession,
   };
 
   return (

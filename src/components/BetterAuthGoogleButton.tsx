@@ -47,6 +47,9 @@ export const BetterAuthGoogleButton: React.FC<BetterAuthGoogleButtonProps> = ({
       console.log('Google Client ID:', process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID?.substring(0, 20) + '...');
       console.log('Callback URL:', callbackURL);
       console.log('Starting Google sign-in with Better Auth...');
+      console.log('[Client] Better Auth Config:', {
+        callbackURL: `/${callbackURL}`,
+      });
       
       // Check if auth client is properly initialized
       if (!authClient) {
@@ -57,7 +60,7 @@ export const BetterAuthGoogleButton: React.FC<BetterAuthGoogleButtonProps> = ({
       // According to Better Auth docs, callbackURL should be a simple path
       const result = await authClient.signIn.social({
         provider: 'google',
-        callbackURL: `/${callbackURL}`, // Add leading slash for proper routing
+        callbackURL: `/auth/callback`,
       });
 
       console.log('Google sign-in result:', JSON.stringify(result, null, 2));
@@ -78,36 +81,46 @@ export const BetterAuthGoogleButton: React.FC<BetterAuthGoogleButtonProps> = ({
         }
       }
 
-      // Get the session to verify sign-in was successful
+      // For OAuth flow, if we get a redirect URL, we need to handle it
+      if (result?.data?.redirect && result?.data?.url) {
+        console.log('OAuth redirect required, opening browser...');
+        console.log('OAuth URL:', result.data.url);
+        
+        // The OAuth flow will redirect back to the app via the callback screen
+        // The session will be handled by the callback screen
+        // Don't try to get session here, just let the OAuth flow complete
+        
+        // Call success callback to indicate OAuth initiation was successful
+        if (onSuccess) {
+          // Pass a placeholder since we don't have the actual user yet
+          onSuccess({ oauthInitiated: true } as any);
+        }
+        
+        return;
+      }
+
+      // If we get here, it means we got a direct response (non-OAuth)
+      // This shouldn't happen with Google OAuth but handle it just in case
       const session = await authClient.getSession();
       
       if (session?.data?.user) {
-        console.log('Sign-in successful, user:', session.data.user);
+        console.log('Sign-in successful (direct), user:', session.data.user);
         
         // Call success callback if provided
         if (onSuccess) {
           onSuccess(session.data.user);
         }
 
-        // Show welcome message for new sign-ups
-        if (isSignUp) {
-          Alert.alert(
-            "Welcome to Spilled! 🎉",
-            "Your account has been created successfully. Please upload your ID for verification to start posting and messaging.",
-            [{ 
-              text: "Let's go!",
-              onPress: () => {
-                // Navigate to the callback URL
-                router.replace(callbackURL as any);
-              }
-            }]
-          );
-        } else {
-          // Navigate to the callback URL for sign-ins
-          router.replace(callbackURL as any);
-        }
+        // For direct sign-in, navigate to home and let routing handle verification
+        router.replace('/' as any);
       } else {
-        throw new Error('No session found after sign-in');
+        // No session found - this might be normal for OAuth flow
+        console.log('No immediate session found - this is normal for OAuth flow');
+        
+        // Call success callback to indicate OAuth was initiated
+        if (onSuccess) {
+          onSuccess({ oauthInitiated: true } as any);
+        }
       }
     } catch (error) {
       console.error('=== Google Sign-in Error Details ===');

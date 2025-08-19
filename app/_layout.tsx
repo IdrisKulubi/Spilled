@@ -63,6 +63,20 @@ function AppStack({ fontLoaded }: { fontLoaded: boolean }) {
           presentation: 'card',
         }}
       />
+      <Stack.Screen
+        name="auth/callback"
+        options={{
+          headerShown: false,
+          presentation: 'card',
+        }}
+      />
+      <Stack.Screen
+        name="redirect"
+        options={{
+          headerShown: false,
+          presentation: 'card',
+        }}
+      />
     </Stack>
   );
 }

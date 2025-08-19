@@ -21,6 +21,7 @@ const getDatabaseConnection = () => {
 // Initialize Better Auth with the same configuration
 const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL || process.env.EXPO_PUBLIC_AUTH_BASE_URL || "https://spilled-kappa.vercel.app/api/auth",
+  secret: process.env.BETTER_AUTH_SECRET || process.env.AUTH_SECRET,
   database: drizzleAdapter(getDatabaseConnection(), {
     provider: "pg",
     schema: {
@@ -38,6 +39,8 @@ const auth = betterAuth({
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID || process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || "",
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || process.env.EXPO_PUBLIC_GOOGLE_CLIENT_SECRET || "",
+      // Remove the callbackURL override - let Better Auth handle it
+      // The callback will be handled by the server which will then redirect to the app
     },
   },
   session: {
@@ -104,17 +107,24 @@ const auth = betterAuth({
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
-    // Log the request for debugging
-    console.log('Auth API Request:', {
-      method: req.method,
-      url: req.url,
-      path: req.url?.split('?')[0],
-      query: req.query,
-      headers: {
-        origin: req.headers.origin,
-        'content-type': req.headers['content-type'],
-      }
-    });
+  console.log("Auth API Request:", {
+    method: req.method,
+    url: req.url,
+    path: req.url?.split('?')[0],
+    query: req.query,
+    headers: {
+      origin: req.headers.origin,
+      'content-type': req.headers['content-type'],
+    },
+  });
+
+  // Log the configuration being used
+  console.log("Better Auth Config:", {
+    baseURL: auth.config.baseURL,
+    secret: auth.config.secret ? '[SET]' : '[NOT SET]',
+    googleClientId: auth.config.socialProviders?.google?.clientId ? '[SET]' : '[NOT SET]',
+    googleCallbackURL: auth.config.socialProviders?.google?.callbackURL,
+  });
 
     // Construct the full URL for Better Auth
     const url = new URL(req.url || '/', `https://${req.headers.host || 'spilled-kappa.vercel.app'}`);
