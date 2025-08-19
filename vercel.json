@@ -1,0 +1,19 @@
+{
+  "functions": {
+    "api/**/*.ts": {
+      "maxDuration": 30
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/$1"
+    }
+  ],
+  "env": {
+    "NODE_ENV": "production"
+  },
+  "buildCommand": "npm install",
+  "outputDirectory": ".",
+  "installCommand": "npm install"
+}

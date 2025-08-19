@@ -87,7 +87,6 @@ export const auth = betterAuth({
   plugins: [
     expo({
       overrideOrigin: true, // Set to true if facing CORS issues with Expo API routes
-      trustHost: true, // Trust the host header for generating the callback URL
     }),
   ],
 });
